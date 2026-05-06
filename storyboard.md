@@ -3,6 +3,8 @@
 본 문서는 사용자가 앱에 접속한 후 면접을 마치고 결과를 확인할 때까지의 4단계 화면 전환(Routing) 흐름을 정의합니다.
 
 ## 📱 Page 1: 홈 화면 (Home & Setup)
+> 💡 **UI 와이어프레임:**
+> ![Page 1 Wireframe](./assets/wireframe_page1.png)
 * **목적:** 서비스 첫인상 및 이력서 업로드
 * **UI 구성 (화면 중앙 집중형):**
   * **큰 타이틀:** "👔 Tech-Interviewer AI"
@@ -13,6 +15,8 @@
 * **인터랙션:** 버튼 클릭 시 이력서 파싱이 시작(로딩 스피너)되며, 완료 시 Page 2로 전환.
 
 ## 📱 Page 2: 이력서 요약 확인 화면 (Resume Summary)
+> 💡 **UI 와이어프레임:**
+> ![Page 2 Wireframe](./assets/wireframe_page2.png)
 * **목적:** AI가 파악한 내 이력서의 핵심 내용을 확인하고 마음의 준비를 하는 단계
 * **UI 구성:**
   * **상단 헤더:** "면접관이 이력서 분석을 완료했습니다!"
@@ -24,8 +28,8 @@
 * **인터랙션:** 요약 내용을 확인하고 '시작' 버튼을 누르면 긴장감과 함께 Page 3으로 라우팅됨.
 
 ## 📱 Page 3: 면접 대화 화면 (The Interview)
-> 💡 **UI 참고 이미지 (AI Mockup):**
-> ![면접 대화 화면 UI](./assets/interview_chat_mockup.png)
+> 💡 **UI 와이어프레임:**
+> ![Page 3 Wireframe](./assets/wireframe_page3.png)
 * **목적:** 본질에 집중할 수 있는 깔끔한 채팅 인터페이스
 * **UI 구성:**
   * 이전 화면의 파일 업로더나 요약 정보 등은 모두 사라짐.
@@ -37,8 +41,8 @@
   * 지정된 횟수의 질문이 끝나면 "면접이 종료되었습니다. 결과를 분석합니다..." 메시지가 뜨며 Page 4로 라우팅됨.
 
 ## 📱 Page 4: 최종 결과 리포트 화면 (Result Dashboard)
-> 💡 **UI 참고 이미지 (AI Mockup):**
-> ![최종 결과 리포트 화면 UI](./assets/result_dashboard_mockup.png)
+> 💡 **UI 와이어프레임:**
+> ![Page 4 Wireframe](./assets/wireframe_page4.png)
 * **목적:** 면접 결과 분석 및 피드백 시각화
 * **UI 구성:**
   * **화면 전환 효과:** 팡파르 애니메이션 (`st.balloons()`) 적용.
