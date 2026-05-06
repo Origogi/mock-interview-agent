@@ -28,8 +28,11 @@
 * **인터랙션:** 요약 내용을 확인하고 '시작' 버튼을 누르면 긴장감과 함께 Page 3으로 라우팅됨.
 
 ## 📱 Page 3: 면접 대화 화면 (The Interview)
-> 💡 **UI 와이어프레임:**
-> ![Page 3 Wireframe](./assets/wireframe_page3.png)
+> 💡 **UI 와이어프레임 (사이드바 아코디언 상태 비교):**
+> 
+> | 닫힌 상태 (Collapsed) | 펼친 상태 (Expanded) |
+> |:---:|:---:|
+> | ![Collapsed](./assets/wireframe_page3_collapsed.png) | ![Expanded](./assets/wireframe_page3_expanded.png) |
 * **목적:** 본질에 집중할 수 있는 깔끔한 채팅 인터페이스
 * **UI 구성:**
   * 이전 화면의 파일 업로더나 요약 정보 등은 모두 사라짐.
