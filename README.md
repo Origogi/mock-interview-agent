@@ -1,6 +1,9 @@
 # 👔 Tech-Interviewer AI (AI 맞춤형 압박 면접관)
 
-![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=Streamlit&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Vite](https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E)
+![MUI](https://img.shields.io/badge/MUI-%230081CB.svg?style=for-the-badge&logo=mui&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
 ![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)
@@ -25,8 +28,8 @@
 
 ## 🛠 기술 스택 (Tech Stack)
 
-* **Frontend:** Streamlit, Plotly (차트 시각화)
-* **Backend & Agent:** Python, LangGraph, LangChain
+* **Frontend:** React (Vite), MUI (Material-UI), Recharts (차트 시각화)
+* **Backend & Agent:** Python, FastAPI, LangGraph, LangChain
 * **LLM:** OpenAI (`gpt-4o-mini`)
 * **Data Processing:** PyPDF2 (이력서 텍스트 파싱)
 
@@ -43,20 +46,35 @@
 
 ## 🚀 실행 방법 (Getting Started)
 
-### 1. 필수 패키지 설치
+### 1. 백엔드 (Backend) 설정
 ```bash
-pip install streamlit PyPDF2 plotly langchain langgraph openai
+cd backend
+pip install -r requirements.txt
 ```
-
-### 2. 환경 변수 설정
-루트 디렉토리에 `.env` 파일을 생성하고 OpenAI API 키를 입력합니다.
+루트 디렉토리 또는 `backend` 폴더에 `.env` 파일을 생성하고 OpenAI API 키를 입력합니다.
 ```env
 OPENAI_API_KEY="your-api-key-here"
 ```
 
-### 3. 애플리케이션 실행
+### 2. 프론트엔드 (Frontend) 설정
 ```bash
-streamlit run app.py
+cd frontend
+npm install
+```
+
+### 3. 애플리케이션 실행 (Monorepo)
+터미널을 두 개 열어서 각각 실행합니다.
+
+**Terminal 1 (Backend)**
+```bash
+cd backend
+uvicorn main:app --reload
+```
+
+**Terminal 2 (Frontend)**
+```bash
+cd frontend
+npm run dev
 ```
 
 ## 📂 기획 및 설계 문서

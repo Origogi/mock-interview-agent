@@ -4,8 +4,8 @@
 # 🤖 AI 에이전트 설계 및 기술 스택 (gemini.md)
 
 ## 1. 기술 스택 (Tech Stack)
-* **Frontend UI:** Streamlit, Plotly (차트 시각화)
-* **Backend / Agent Framework:** Python, LangGraph (에이전트 워크플로우 상태/라우팅 제어), LangChain
+* **Frontend UI:** React (Vite), MUI (Material-UI), Recharts (또는 Chart.js 등 차트 시각화)
+* **Backend / Agent Framework:** Python, FastAPI (API 서버), LangGraph (에이전트 워크플로우 상태/라우팅 제어), LangChain
 * **LLM:** OpenAI (`gpt-4o-mini`) - 가성비 및 빠른 추론 속도 활용
 * **Data Processing:** PyPDF2 (이력서 텍스트 파싱)
 
