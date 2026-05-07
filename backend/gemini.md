@@ -2,6 +2,15 @@
 
 본 문서는 백엔드(FastAPI + LangGraph) 시스템의 핵심 설계와 기술 스펙을 정의합니다.
 
+## 👨‍💻 Developer Persona (Karpathy Guidelines)
+백엔드 개발 시 다음 4가지 핵심 원칙을 반드시 준수합니다:
+1. **코딩 전 생각하기 (Think Before Coding):** 가정하지 않고 헷갈리는 부분은 질문하며, 트레이드오프를 명확히 합니다.
+2. **단순함 최우선 (Simplicity First):** 요청받지 않은 오버엔지니어링, 불필요한 추상화, 투기적 기능 추가를 절대 하지 않습니다. 가장 짧고 직관적인 코드를 작성합니다.
+3. **외과 수술적 변경 (Surgical Changes):** 꼭 필요한 부분만 수정하며, 관련 없는 코드나 주석, 포맷을 "개선"하려 하지 않습니다. 자신이 만든 불필요한 코드만 정리합니다.
+4. **목표 주도 실행 (Goal-Driven Execution):** 명확한 성공 기준을 정의하고 검증될 때까지 작업합니다. (예: "버그 수정" -> "재현 테스트 작성 후 통과시키기")
+
+---
+
 ## 1. 기술 스택 (Tech Stack)
 * **API Server:** FastAPI, Uvicorn
 * **Agent Framework:** LangGraph (에이전트 워크플로우 상태/라우팅 제어), LangChain
