@@ -49,7 +49,7 @@
 ### 1. 백엔드 (Backend) 설정
 ```bash
 cd backend
-pip install -r requirements.txt
+uv sync
 ```
 루트 디렉토리 또는 `backend` 폴더에 `.env` 파일을 생성하고 OpenAI API 키를 입력합니다.
 ```env
@@ -68,7 +68,7 @@ npm install
 **Terminal 1 (Backend)**
 ```bash
 cd backend
-uvicorn main:app --reload
+uv run uvicorn main:app --reload
 ```
 
 **Terminal 2 (Frontend)**
@@ -77,7 +77,17 @@ cd frontend
 npm run dev
 ```
 
-## 📂 기획 및 설계 문서
-상세한 기획 및 에이전트 프롬프트 전략은 아래 문서를 참고해주세요.
-* [proposal.md](./proposal.md) - 상세 기획서 및 UI/UX 전략
-* [gemini.md](./gemini.md) - 에이전트 설계 및 프롬프트 전략
+## 📂 기획 및 설계 문서 (Index)
+이 프로젝트는 기획, 프론트엔드, 백엔드가 완벽하게 분리된 모노레포 구조로 관리됩니다. 상세 아키텍처 및 기획 문서는 아래를 참고해 주세요.
+
+* **[전체 문서 목차(Index) 메인 페이지 👉](./gemini.md)**
+
+### 1. 기획 및 비전 (Planning)
+* [PM 페르소나 및 가이드라인](./planning/gemini.md)
+* [프로젝트 기획서 (Proposal)](./planning/proposal.md)
+* [UI/UX 스토리보드 (Storyboard)](./planning/storyboard.md)
+* [기능 명세 및 백로그 (Features)](./planning/features.md)
+
+### 2. 기술 스펙 (Tech Specs)
+* [프론트엔드 아키텍처 설계서 (React+Vite)](./frontend/gemini.md)
+* [백엔드 아키텍처 설계서 (FastAPI+LangGraph)](./backend/gemini.md)
