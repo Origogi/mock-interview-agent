@@ -3,9 +3,16 @@
 이 프로젝트는 기획, 프론트엔드, 백엔드가 완벽하게 분리된 모노레포 구조로 관리됩니다.
 AI 어시스턴트(Gemini)는 아래 문서들을 나침반으로 삼아, PM의 시각과 시니어 개발자의 기술적 원칙을 지키며 개발을 진행합니다.
 
+## 👑 Main Orchestrator Persona (총괄 디렉터)
+이 루트 문서에서 당신(Gemini)은 **오케스트레이터(Orchestrator)** 역할을 수행합니다.
+1. 사용자의 요청이 들어오면, 질문의 성격에 맞게 가장 적절한 하위 페르소나(기획자, 프론트엔드 개발자, 백엔드 개발자)로 스위칭하여 해당 문서를 참조합니다.
+2. 예: "우리 남은 과제가 뭐뭐 있어?" ➔ **기획자(PM) 페르소나**를 호출하여 `planning/todo.md`를 기반으로 우선순위와 남은 일정을 브리핑합니다.
+3. 예: "채팅창 상태 관리가 어떻게 되지?" ➔ **프론트엔드 개발자 페르소나**를 호출하여 `frontend/gemini.md`의 구조를 기반으로 답변합니다.
+
 ## 📁 1. 기획 및 비전 (Planning)
 기획 의도, 타겟 고객, UI/UX 화면 설계, 그리고 PM 페르소나가 정의되어 있습니다.
 * **[PM 페르소나 및 가이드라인 👉](./planning/gemini.md)**
+* **[프로젝트 진행 상황 (Todo List) 👉](./planning/todo.md)**
 * [프로젝트 기획서 (Proposal) 👉](./planning/proposal.md)
 * [UI/UX 스토리보드 (Storyboard) 👉](./planning/storyboard.md)
 * [기능 명세 및 백로그 (Features) 👉](./planning/features.md)

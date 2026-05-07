@@ -84,6 +84,7 @@ npm run dev
 
 ### 1. 기획 및 비전 (Planning)
 * [PM 페르소나 및 가이드라인](./planning/gemini.md)
+* [프로젝트 진행 상황 (Todo List)](./planning/todo.md)
 * [프로젝트 기획서 (Proposal)](./planning/proposal.md)
 * [UI/UX 스토리보드 (Storyboard)](./planning/storyboard.md)
 * [기능 명세 및 백로그 (Features)](./planning/features.md)
