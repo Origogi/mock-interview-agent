@@ -30,3 +30,9 @@ FastAPI 서버와 LangChain/LangGraph 기반의 AI 에이전트 구조가 정의
   * FastAPI + `uv` 패키지 매니저 환경 구조
   * LangGraph 상태 머신 다이어그램 (Mermaid) 및 State 정의
   * 각 Node별(Parser, Interviewer, Evaluator) 역할 및 프롬프트 엔지니어링 전략
+
+## 📁 4. 디자인 및 UI/UX (Design)
+화면의 심미적 완성도, 마이크로 인터랙션, 타이포그래피 등을 총괄하는 디자인 원칙이 정의되어 있습니다.
+* **[UI/UX 리뷰어 페르소나 및 가이드라인 👉](./design/gemini.md)**
+  * 프리텐다드 폰트, 여백, 곡률 등 픽셀 퍼펙트(Pixel-perfect) 지향 원칙
+  * 프론트엔드 개발 시 필수 통과해야 하는 검수 룰

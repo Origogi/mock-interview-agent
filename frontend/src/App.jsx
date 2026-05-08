@@ -1,11 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ThemeProvider, createTheme, CssBaseline, Box, Typography, Button, 
-  CircularProgress, Container, Snackbar, Alert, Paper, Divider
+  CircularProgress, Container, Snackbar, Alert, Paper, Divider, Avatar,
+  Grid, LinearProgress, TextField, IconButton, Accordion, AccordionSummary, AccordionDetails
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UploadCloud, FileText, Sparkles, CheckCircle2, Server, ServerOff, Code2, Briefcase, AlertTriangle, ArrowRight } from 'lucide-react';
+import { UploadCloud, FileText, Sparkles, CheckCircle2, Server, ServerOff, Code2, Briefcase, AlertTriangle, ArrowRight, User, Loader2, Building, TrendingUp, Send, ChevronDown, StopCircle, Bot } from 'lucide-react';
 import { styled } from '@mui/material/styles';
+
+// Witty loading messages
+const loadingMessages = [
+  "🧹 면접장을 깔끔하게 청소하는 중...",
+  "☕ 간단한 다과와 마실 물을 준비하는 중...",
+  "👔 면접관이 넥타이를 고쳐 매는 중...",
+  "📝 지원서의 핵심 역량에 형광펜을 칠하는 중...",
+  "🤔 날카롭고 예리한 꼬리 질문을 고민하는 중...",
+];
 
 // Create a premium dark theme
 const darkTheme = createTheme({
@@ -29,7 +39,7 @@ const darkTheme = createTheme({
     }
   },
   typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    fontFamily: '"Pretendard Variable", "Pretendard", "Inter", "Roboto", "Helvetica", "Arial", sans-serif',
     h2: {
       fontWeight: 800,
       letterSpacing: '-0.02em',
@@ -47,7 +57,7 @@ const darkTheme = createTheme({
     }
   },
   shape: {
-    borderRadius: 16,
+    borderRadius: 12,
   },
   components: {
     MuiButton: {
@@ -85,6 +95,32 @@ function App() {
   const [serverStatus, setServerStatus] = useState('checking');
   const [errorMsg, setErrorMsg] = useState('');
   const [summaryData, setSummaryData] = useState(null);
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+
+  // Page 3 States
+  const [messages, setMessages] = useState([]);
+  const [evaluations, setEvaluations] = useState([]);
+  const [currentQuestionCount, setCurrentQuestionCount] = useState(0);
+  const maxQuestions = 5;
+  const [chatInput, setChatInput] = useState('');
+  const messagesEndRef = useRef(null);
+
+  // Scroll to bottom of chat
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  useEffect(() => {
+    let interval;
+    if (isUploading) {
+      interval = setInterval(() => {
+        setLoadingMsgIdx((prev) => (prev + 1) % loadingMessages.length);
+      }, 3000);
+    } else {
+      setLoadingMsgIdx(0);
+    }
+    return () => clearInterval(interval);
+  }, [isUploading]);
 
   useEffect(() => {
     const checkServer = async () => {
@@ -136,6 +172,7 @@ function App() {
   const handleUpload = async () => {
     if (!selectedFile) return;
     setIsUploading(true);
+    setCurrentPage('summary'); // 즉시 Page 2로 이동하여 로딩 화면 노출
     
     try {
       const formData = new FormData();
@@ -149,18 +186,24 @@ function App() {
       const data = await response.json();
 
       if (response.ok) {
-        // 성공 시 더미 데이터 주입 후 Page 2로 전환
+        const parsed = data.parsed_data || { bio: '', tech_stack: [], projects: [] };
+        
         setSummaryData({
-          techStack: ['React', 'Node.js', 'FastAPI', 'AWS'],
-          projects: ['대용량 트래픽 처리 서버 구축', 'AI 모의 면접 에이전트 개발'],
-          weakPoints: ['데이터베이스 인덱싱 및 캐싱 전략', 'MSA 아키텍처에서의 트랜잭션 관리']
+          bio: parsed.bio || '',
+          workExperience: parsed.work_experience || [],
+          techStack: parsed.tech_stack || [],
+          projects: parsed.projects || [],
+          strengths: parsed.strengths || ['이력서를 바탕으로 강점을 분석 중입니다.'],
+          weakPoints: parsed.weaknesses || parsed.focus_points || ['이력서를 바탕으로 심층 면접 질문을 준비 중입니다.']
         });
-        setCurrentPage('summary');
+        // 상태 유지 (isUploading이 false가 되면 요약 화면 표시됨)
       } else {
         setErrorMsg(`업로드 실패: ${data.detail}`);
+        setCurrentPage('home'); // 실패 시 다시 홈으로
       }
     } catch (error) {
       setErrorMsg(`서버 연결 오류: 백엔드 서버가 실행 중인지 확인해주세요.`);
+      setCurrentPage('home'); // 실패 시 다시 홈으로
     } finally {
       setIsUploading(false);
     }
@@ -276,9 +319,62 @@ function App() {
     </motion.div>
   );
 
-  // 랜더링 함수: Page 2 (Summary)
-  const renderSummary = () => (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+  // 랜더링 함수: Page 2 (Summary / Loading)
+  const renderSummary = () => {
+    if (isUploading) {
+      return (
+        <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '400px', gap: 6 }}>
+            {/* Custom AI Core Loader */}
+            <Box sx={{ position: 'relative', width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <motion.div
+                animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', border: '2px solid #a78bfa' }}
+              />
+              <motion.div
+                animate={{ scale: [1, 1.8, 1], opacity: [0.3, 0, 0.3] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', border: '2px solid #06b6d4' }}
+              />
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                style={{ 
+                  width: 64, height: 64, borderRadius: '50%', 
+                  background: 'linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%)',
+                  boxShadow: '0 0 40px rgba(124, 58, 237, 0.8)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+              >
+                <Sparkles size={32} color="white" />
+              </motion.div>
+            </Box>
+            <Box sx={{ textAlign: 'center', height: '100px' }}>
+              <Typography variant="h4" fontWeight="600" color="primary.light" gutterBottom sx={{ mb: 3 }}>
+                AI가 이력서를 꼼꼼히 분석하고 있습니다...
+              </Typography>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={loadingMsgIdx}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <Typography variant="h6" color="text.secondary">
+                    {loadingMessages[loadingMsgIdx]}
+                  </Typography>
+                </motion.div>
+              </AnimatePresence>
+            </Box>
+          </Box>
+        </motion.div>
+      );
+    }
+
+    return (
+      <motion.div key="summary" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
       <Box sx={{ textAlign: 'center', mb: 5 }}>
         <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, color: 'primary.light' }}>
           <CheckCircle2 size={36} />
@@ -294,16 +390,59 @@ function App() {
           p: 4, 
           backgroundColor: 'background.paper', 
           backdropFilter: 'blur(16px)',
-          borderRadius: 4,
+          borderRadius: 3,
           border: '1px solid rgba(255,255,255,0.05)',
           mb: 5
         }}
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          {/* Bio */}
+          {summaryData?.bio && (
+            <Box>
+              <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5, color: '#f8fafc' }}>
+                <User size={24} color="#a78bfa" /> 프로필 요약
+              </Typography>
+              <Box sx={{ pl: 4, pr: 2 }}>
+                <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.8, borderLeft: '3px solid #a78bfa', pl: 2.5 }}>
+                  {summaryData.bio}
+                </Typography>
+              </Box>
+            </Box>
+          )}
+
+          {summaryData?.bio && <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />}
+
+          {/* Work Experience */}
+          {summaryData?.workExperience?.length > 0 && (
+            <>
+              <Box>
+                <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5, color: '#10b981' }}>
+                  <Building size={24} /> 주요 회사 이력
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, pl: 4 }}>
+                  {summaryData.workExperience.map((work, idx) => (
+                    <Box key={idx} sx={{ p: 2, borderRadius: 2, backgroundColor: 'rgba(16, 185, 129, 0.05)', borderLeft: '3px solid #10b981' }}>
+                      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontSize: '0.8rem' }}>
+                        {work.period}
+                      </Typography>
+                      <Typography variant="subtitle1" fontWeight="bold" color="#f8fafc" sx={{ lineHeight: 1.2, mb: 0.5 }}>
+                        {work.company}
+                      </Typography>
+                      <Typography variant="body2" color="#10b981" fontWeight="500">
+                        {work.role}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+              <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
+            </>
+          )}
+
           {/* Tech Stack */}
           <Box>
-            <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, color: '#06b6d4' }}>
-              <Code2 size={24} /> 🛠️ 파악된 주요 기술 스택
+            <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5, color: '#06b6d4' }}>
+              <Code2 size={24} /> 파악된 주요 기술 스택
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, pl: 4 }}>
               {summaryData?.techStack.map(tech => (
@@ -318,27 +457,56 @@ function App() {
 
           {/* Projects */}
           <Box>
-            <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, color: '#a78bfa' }}>
-              <Briefcase size={24} /> 🏆 주목할 만한 프로젝트
+            <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5, color: '#a78bfa' }}>
+              <Briefcase size={24} /> 주목할 만한 프로젝트
             </Typography>
-            <Box sx={{ pl: 4, display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {summaryData?.projects.map(proj => (
-                <Typography key={proj} variant="body1">▪ {proj}</Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pl: 4 }}>
+              {summaryData?.projects.map((proj, idx) => (
+                <Box key={idx} sx={{ p: 2.5, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <Typography variant="subtitle1" fontWeight="bold" color="#f8fafc" gutterBottom>
+                    {proj.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    {proj.description}
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {proj.technologies?.map(tech => (
+                      <Box key={tech} sx={{ px: 1.5, py: 0.5, borderRadius: 1.5, fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'rgba(124, 58, 237, 0.15)', color: '#c4b5fd', border: '1px solid rgba(124, 58, 237, 0.3)' }}>
+                        {tech}
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
               ))}
             </Box>
           </Box>
 
           <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
 
-          {/* Weak Points */}
-          <Box>
-            <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, color: '#fbbf24' }}>
-              <AlertTriangle size={24} /> ⚠️ 예상되는 집중 질문 포인트
-            </Typography>
-            <Box sx={{ pl: 4, display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {summaryData?.weakPoints.map(point => (
-                <Typography key={point} variant="body1" color="text.secondary">▪ {point}</Typography>
-              ))}
+          {/* Strengths & Weaknesses (Grid Layout) */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 4 }}>
+            {/* Strengths */}
+            <Box>
+              <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5, color: '#3b82f6' }}>
+                <TrendingUp size={24} /> 지원자 강점
+              </Typography>
+              <Box sx={{ pl: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {summaryData?.strengths?.map((point, idx) => (
+                  <Typography key={idx} variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>▪ {point}</Typography>
+                ))}
+              </Box>
+            </Box>
+
+            {/* Weak Points */}
+            <Box>
+              <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5, color: '#fbbf24' }}>
+                <AlertTriangle size={24} /> 지원자 약점 및 집중 질문
+              </Typography>
+              <Box sx={{ pl: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {summaryData?.weakPoints?.map((point, idx) => (
+                  <Typography key={idx} variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>▪ {point}</Typography>
+                ))}
+              </Box>
             </Box>
           </Box>
         </Box>
@@ -356,13 +524,172 @@ function App() {
             transition: 'transform 0.2s'
           }}
           endIcon={<ArrowRight />}
-          onClick={() => alert("면접 채팅 페이지(Page 3)로 이동 로직 구현 예정")}
+          onClick={() => {
+            setCurrentPage('interview');
+            setMessages([
+              { role: 'ai', content: `안녕하세요! 지원자님의 이력서를 잘 읽어보았습니다.\n\n제출해주신 "${summaryData?.projects?.[0]?.name || '주요 프로젝트'}" 관련해서 첫 질문을 드리고 싶습니다.\n\n이 프로젝트에서 본인이 담당했던 가장 핵심적인 기술적 챌린지는 무엇이었으며, 어떻게 해결하셨나요?` }
+            ]);
+          }}
         >
           🚀 실전 면접 시작하기
         </Button>
       </Box>
     </motion.div>
-  );
+    );
+  };
+
+  // 랜더링 함수: Page 3 (Interview Chat)
+  const renderInterview = () => {
+    return (
+      <motion.div key="interview" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
+        <Grid container spacing={3} sx={{ height: '80vh', mt: 1 }}>
+          {/* Left Panel: Dashboard */}
+          <Grid item xs={12} md={4} sx={{ display: 'flex', flexDirection: 'column', gap: 3, height: '100%' }}>
+            <Paper sx={{ p: 3, backgroundColor: 'background.paper', backdropFilter: 'blur(16px)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <TrendingUp size={20} color="#a78bfa" /> 면접 진행률
+                </Typography>
+                <Typography variant="body2" color="text.secondary" fontWeight="bold">
+                  {currentQuestionCount} / {maxQuestions}
+                </Typography>
+              </Box>
+              <LinearProgress 
+                variant="determinate" 
+                value={(currentQuestionCount / maxQuestions) * 100} 
+                sx={{ height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.1)', '& .MuiLinearProgress-bar': { background: 'linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%)' } }} 
+              />
+              
+              <Button 
+                variant="outlined" 
+                color="error" 
+                fullWidth 
+                startIcon={<StopCircle size={18} />} 
+                sx={{ mt: 3, borderColor: 'rgba(239, 68, 68, 0.3)', color: '#ef4444' }}
+                onClick={() => alert("면접 조기 종료 및 결과 보기 (Page 4 이동)")}
+              >
+                조기 종료 및 결과 보기
+              </Button>
+            </Paper>
+
+            <Paper sx={{ p: 3, flex: 1, overflowY: 'auto', backgroundColor: 'background.paper', backdropFilter: 'blur(16px)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)' }}>
+              <Typography variant="h6" fontWeight="bold" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CheckCircle2 size={20} color="#10b981" /> 실시간 평가 내역
+              </Typography>
+              {evaluations.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 5 }}>
+                  아직 평가 내역이 없습니다.<br/>첫 답변을 입력해 주세요.
+                </Typography>
+              ) : (
+                evaluations.map((ev, idx) => (
+                  <Accordion key={idx} sx={{ backgroundColor: 'rgba(255,255,255,0.03)', mb: 1, '&:before': { display: 'none' }, borderRadius: '8px !important' }}>
+                    <AccordionSummary expandIcon={<ChevronDown size={16} />}>
+                      <Typography variant="subtitle2">Q{idx+1}. {ev.question.substring(0, 20)}...</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Typography variant="body2" color="primary.light" sx={{ mb: 1 }}>점수: {ev.score}/10</Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>{ev.feedback}</Typography>
+                    </AccordionDetails>
+                  </Accordion>
+                ))
+              )}
+            </Paper>
+          </Grid>
+
+          {/* Right Panel: Chat Room */}
+          <Grid item xs={12} md={8} sx={{ height: '100%' }}>
+            <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'background.paper', backdropFilter: 'blur(16px)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+              
+              {/* Chat Header */}
+              <Box sx={{ p: 2.5, borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 2, backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                <Avatar sx={{ backgroundColor: '#7c3aed' }}><Bot size={24} /></Avatar>
+                <Box>
+                  <Typography variant="subtitle1" fontWeight="bold">시니어 엔지니어 면접관</Typography>
+                  <Typography variant="body2" color="text.secondary">Tech-Interviewer AI</Typography>
+                </Box>
+                {/* Interviewer Reaction Avatar/Emoji Placeholder */}
+                <Box sx={{ ml: 'auto', p: 1, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body2" color="text.secondary">상태:</Typography>
+                  <Typography variant="h5" sx={{ lineHeight: 1 }}>🤔</Typography>
+                </Box>
+              </Box>
+
+              {/* Chat Messages */}
+              <Box sx={{ flex: 1, p: 3, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {messages.map((msg, idx) => (
+                  <Box key={idx} sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: msg.role === 'user' ? 'row-reverse' : 'row' }}>
+                    <Avatar sx={{ backgroundColor: msg.role === 'ai' ? '#7c3aed' : '#06b6d4', width: 36, height: 36 }}>
+                      {msg.role === 'ai' ? <Bot size={20} /> : <User size={20} />}
+                    </Avatar>
+                    <Box sx={{ 
+                      maxWidth: '75%', p: 2, borderRadius: 3,
+                      backgroundColor: msg.role === 'ai' ? 'rgba(124, 58, 237, 0.15)' : 'rgba(6, 182, 212, 0.15)',
+                      border: '1px solid',
+                      borderColor: msg.role === 'ai' ? 'rgba(124, 58, 237, 0.3)' : 'rgba(6, 182, 212, 0.3)',
+                      borderTopLeftRadius: msg.role === 'ai' ? 4 : 12,
+                      borderTopRightRadius: msg.role === 'user' ? 4 : 12,
+                    }}>
+                      <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, fontFamily: msg.content.includes('{') || msg.content.includes('function') ? 'monospace' : 'inherit' }}>{msg.content}</Typography>
+                    </Box>
+                  </Box>
+                ))}
+                <div ref={messagesEndRef} />
+              </Box>
+
+              {/* Chat Input */}
+              <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                <TextField
+                  fullWidth
+                  multiline
+                  maxRows={4}
+                  placeholder="답변을 입력하세요... (Tab: 들여쓰기, Shift+Enter: 줄바꿈, Enter: 전송)"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (chatInput.trim()) {
+                        setMessages([...messages, { role: 'user', content: chatInput.trim() }]);
+                        setChatInput('');
+                      }
+                    }
+                    if (e.key === 'Tab') {
+                      e.preventDefault();
+                      setChatInput(prev => prev + "    ");
+                    }
+                  }}
+                  variant="outlined"
+                  InputProps={{
+                    sx: { 
+                      backgroundColor: 'rgba(255,255,255,0.05)', 
+                      borderRadius: 3,
+                      '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+                      '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                      '&.Mui-focused fieldset': { borderColor: '#06b6d4' },
+                      fontFamily: 'monospace'
+                    },
+                    endAdornment: (
+                      <IconButton 
+                        color="secondary" 
+                        onClick={() => {
+                          if (chatInput.trim()) {
+                            setMessages([...messages, { role: 'user', content: chatInput.trim() }]);
+                            setChatInput('');
+                          }
+                        }}
+                      >
+                        <Send size={20} />
+                      </IconButton>
+                    )
+                  }}
+                />
+              </Box>
+            </Paper>
+          </Grid>
+        </Grid>
+      </motion.div>
+    );
+  };
 
   return (
     <ThemeProvider theme={darkTheme}>
@@ -380,7 +707,7 @@ function App() {
         display: 'flex', alignItems: 'center', gap: 1.5,
         backgroundColor: 'rgba(30, 41, 59, 0.8)',
         backdropFilter: 'blur(8px)',
-        py: 1, px: 2, borderRadius: 8,
+        py: 1, px: 2, borderRadius: 3,
         border: '1px solid rgba(255,255,255,0.05)',
         zIndex: 10
       }}>
@@ -413,10 +740,11 @@ function App() {
         </Alert>
       </Snackbar>
 
-      <Container maxWidth="md" sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', py: 4 }}>
+      <Container maxWidth={currentPage === 'interview' ? 'xl' : 'md'} sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', py: 4, transition: 'max-width 0.5s ease' }}>
         <AnimatePresence mode="wait">
           {currentPage === 'home' && <Box key="home">{renderHome()}</Box>}
           {currentPage === 'summary' && <Box key="summary">{renderSummary()}</Box>}
+          {currentPage === 'interview' && <Box key="interview" sx={{ width: '100%' }}>{renderInterview()}</Box>}
         </AnimatePresence>
       </Container>
     </ThemeProvider>
