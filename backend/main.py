@@ -1,12 +1,15 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional
 import os
 import tempfile
 from openai import OpenAI
 from dotenv import load_dotenv
 import PyPDF2
 import json
+from agent import graph
+from langgraph.types import Command
 
 load_dotenv() # Load variables from .env
 
@@ -124,6 +127,63 @@ async def upload_file(file: UploadFile = File(...)):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"OpenAI File Upload failed: {str(e)}")
+
+# ─────────────────────────────────────────
+# Chat API (LangGraph)
+# ─────────────────────────────────────────
+class ChatRequest(BaseModel):
+    thread_id: str
+    resume_summary: Optional[dict] = None  # 첫 요청 시만 필요
+    user_answer: Optional[str] = None      # 답변 제출 시
+
+
+@app.post("/api/chat")
+async def chat(request: ChatRequest):
+    config = {"configurable": {"thread_id": request.thread_id}}
+
+    if request.user_answer is None:
+        # 첫 요청: 그래프 초기화 및 시작
+        initial_state = {
+            "resume_summary": request.resume_summary or {},
+            "messages": [],
+            "question_count": 0,
+            "max_questions": 5,
+            "evaluations": [],
+            "final_report": None,
+        }
+        graph.invoke(initial_state, config)
+    else:
+        # 답변 제출: 그래프 재개
+        graph.invoke(Command(resume=request.user_answer), config)
+
+    # 현재 상태 조회
+    state = graph.get_state(config)
+    current_values = state.values
+
+    # 인터럽트 확인 (면접 진행 중)
+    interrupts = []
+    for task in state.tasks:
+        interrupts.extend(task.interrupts)
+
+    if interrupts:
+        # 면접 진행 중: 다음 질문 반환
+        return {
+            "question": interrupts[0].value,
+            "question_count": current_values.get("question_count", 0) + 1,
+            "evaluations": current_values.get("evaluations", []),
+            "is_finished": False,
+            "final_report": None,
+        }
+    else:
+        # 면접 종료: 최종 리포트 반환
+        return {
+            "question": None,
+            "question_count": current_values.get("question_count", 0),
+            "evaluations": current_values.get("evaluations", []),
+            "is_finished": True,
+            "final_report": current_values.get("final_report"),
+        }
+
 
 if __name__ == "__main__":
     import uvicorn
