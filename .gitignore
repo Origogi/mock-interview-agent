@@ -1,27 +1,21 @@
-# Environments
+# Runtime files
+*.pid
+backend/backend.log
+frontend/frontend.log
+
+# Env
 .env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+backend/.env
 
-# Python
+# Dependencies
+node_modules/
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+*.pyc
+.venv/
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Build
+dist/
+build/
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
+# IDE
 .DS_Store
-Thumbs.db
