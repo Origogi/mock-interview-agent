@@ -776,6 +776,7 @@ function App() {
         </Box>
       </motion.div>
     );
+  };
   // 랜더링 함수: Page 4 (Final Report)
   const renderReport = () => {
     const chartData = [
@@ -942,7 +943,7 @@ function App() {
         </Alert>
       </Snackbar>
 
-      {currentPage === 'interview' ? (
+      {(currentPage === 'interview' || currentPage === 'report') ? (
         <Box sx={{ width: '100%', minWidth: '900px', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', py: 4, px: 4 }}>
           <AnimatePresence mode="wait">
             {currentPage === 'interview' && <Box key="interview" sx={{ width: '100%' }}>{renderInterview()}</Box>}
