@@ -1,29 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ThemeProvider, createTheme, Box, Typography, Button,
-  CircularProgress, Snackbar, Alert, Paper, Divider, Avatar,
+  Snackbar, Alert, Paper, Avatar,
   Grid, LinearProgress, TextField, IconButton, Accordion, AccordionSummary, AccordionDetails
 } from '@mui/material';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
-  Sparkles, CheckCircle2, Code2, Briefcase, AlertTriangle, ArrowRight,
-  User, Building, TrendingUp, Send, ChevronDown, StopCircle, Bot,
+  Sparkles, CheckCircle2,
+  User, TrendingUp, Send, ChevronDown, StopCircle, Bot,
   FileX, MoreHorizontal,
 } from 'lucide-react';
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
 } from 'recharts';
 import HomePage from './pages/HomePage.jsx';
+import SummaryPage from './pages/SummaryPage.jsx';
 import TopBar from './components/TopBar.jsx';
 import PageTransition from './components/PageTransition.jsx';
-
-const loadingMessages = [
-  "🧹 면접장을 깔끔하게 청소하는 중...",
-  "☕ 간단한 다과와 마실 물을 준비하는 중...",
-  "👔 면접관이 넥타이를 고쳐 매는 중...",
-  "📝 지원서의 핵심 역량에 형광펜을 칠하는 중...",
-  "🤔 날카롭고 예리한 꼬리 질문을 고민하는 중...",
-];
 
 // MUI 테마는 Page 2~4가 의존하므로 유지. body/배경은 tokens.css가 담당.
 const darkTheme = createTheme({
@@ -65,7 +58,6 @@ function App() {
   const [serverStatus, setServerStatus] = useState('checking');
   const [errorMsg, setErrorMsg] = useState('');
   const [summaryData, setSummaryData] = useState(null);
-  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
 
   // Page 3 States
   const [messages, setMessages] = useState([]);
@@ -81,18 +73,6 @@ function App() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  useEffect(() => {
-    let interval;
-    if (isUploading) {
-      interval = setInterval(() => {
-        setLoadingMsgIdx((prev) => (prev + 1) % loadingMessages.length);
-      }, 3000);
-    } else {
-      setLoadingMsgIdx(0);
-    }
-    return () => clearInterval(interval);
-  }, [isUploading]);
 
   useEffect(() => {
     const checkServer = async () => {
@@ -126,6 +106,7 @@ function App() {
       if (response.ok) {
         const parsed = data.parsed_data || { bio: '', tech_stack: [], projects: [] };
         setSummaryData({
+          name: parsed.name || '',
           bio: parsed.bio || '',
           workExperience: parsed.work_experience || [],
           techStack: parsed.tech_stack || [],
@@ -196,199 +177,6 @@ function App() {
     }
   };
 
-  // ===== Page 2 (Summary) =====
-  const renderSummary = () => {
-    if (isUploading) {
-      return (
-        <div className="screen">
-          <Box sx={{ maxWidth: 900, mx: 'auto', px: 4, py: 8 }}>
-            <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 6 }}>
-                <Box sx={{ position: 'relative', width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <motion.div
-                    animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                    style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', border: '2px solid #a78bfa' }}
-                  />
-                  <motion.div
-                    animate={{ scale: [1, 1.8, 1], opacity: [0.3, 0, 0.3] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-                    style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', border: '2px solid #06b6d4' }}
-                  />
-                  <motion.div
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-                    style={{
-                      width: 64, height: 64, borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%)',
-                      boxShadow: '0 0 40px rgba(124, 58, 237, 0.8)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}
-                  >
-                    <Sparkles size={32} color="white" />
-                  </motion.div>
-                </Box>
-                <Box sx={{ textAlign: 'center', height: '100px' }}>
-                  <Typography variant="h4" fontWeight="600" color="primary.light" gutterBottom sx={{ mb: 3 }}>
-                    AI가 이력서를 꼼꼼히 분석하고 있습니다...
-                  </Typography>
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={loadingMsgIdx}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.4 }}
-                    >
-                      <Typography variant="h6" color="text.secondary">
-                        {loadingMessages[loadingMsgIdx]}
-                      </Typography>
-                    </motion.div>
-                  </AnimatePresence>
-                </Box>
-              </Box>
-            </motion.div>
-          </Box>
-        </div>
-      );
-    }
-
-    return (
-      <div className="screen">
-        <Box sx={{ maxWidth: 900, mx: 'auto', px: 4, py: 8 }}>
-          <motion.div key="summary" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <Box sx={{ textAlign: 'center', mb: 5 }}>
-              <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, color: 'primary.light' }}>
-                <CheckCircle2 size={36} />
-                면접관이 이력서 분석을 완료했습니다!
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                아래의 요약 정보를 확인하고 실전 면접을 준비해 주세요.
-              </Typography>
-            </Box>
-
-            <Paper sx={{ p: 4, backgroundColor: 'background.paper', backdropFilter: 'blur(16px)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)', mb: 5 }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                {summaryData?.bio && (
-                  <Box>
-                    <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5, color: '#f8fafc' }}>
-                      <User size={24} color="#a78bfa" /> 프로필 요약
-                    </Typography>
-                    <Box sx={{ pl: 4, pr: 2 }}>
-                      <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.8, borderLeft: '3px solid #a78bfa', pl: 2.5 }}>
-                        {summaryData.bio}
-                      </Typography>
-                    </Box>
-                  </Box>
-                )}
-
-                {summaryData?.bio && <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />}
-
-                {summaryData?.workExperience?.length > 0 && (
-                  <>
-                    <Box>
-                      <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5, color: '#10b981' }}>
-                        <Building size={24} /> 주요 회사 이력
-                      </Typography>
-                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, pl: 4 }}>
-                        {summaryData.workExperience.map((work, idx) => (
-                          <Box key={idx} sx={{ p: 2, borderRadius: 2, backgroundColor: 'rgba(16, 185, 129, 0.05)', borderLeft: '3px solid #10b981' }}>
-                            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontSize: '0.8rem' }}>{work.period}</Typography>
-                            <Typography variant="subtitle1" fontWeight="bold" color="#f8fafc" sx={{ lineHeight: 1.2, mb: 0.5 }}>{work.company}</Typography>
-                            <Typography variant="body2" color="#10b981" fontWeight="500">{work.role}</Typography>
-                          </Box>
-                        ))}
-                      </Box>
-                    </Box>
-                    <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
-                  </>
-                )}
-
-                <Box>
-                  <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5, color: '#06b6d4' }}>
-                    <Code2 size={24} /> 파악된 주요 기술 스택
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, pl: 4 }}>
-                    {summaryData?.techStack.map((tech) => (
-                      <Box key={tech} sx={{ px: 2, py: 1, borderRadius: 2, backgroundColor: 'rgba(6, 182, 212, 0.1)', border: '1px solid rgba(6, 182, 212, 0.3)' }}>
-                        {tech}
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-
-                <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
-
-                <Box>
-                  <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5, color: '#a78bfa' }}>
-                    <Briefcase size={24} /> 주목할 만한 프로젝트
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pl: 4 }}>
-                    {summaryData?.projects.map((proj, idx) => (
-                      <Box key={idx} sx={{ p: 2.5, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                        <Typography variant="subtitle1" fontWeight="bold" color="#f8fafc" gutterBottom>{proj.name}</Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{proj.description}</Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                          {proj.technologies?.map((tech) => (
-                            <Box key={tech} sx={{ px: 1.5, py: 0.5, borderRadius: 1.5, fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'rgba(124, 58, 237, 0.15)', color: '#c4b5fd', border: '1px solid rgba(124, 58, 237, 0.3)' }}>
-                              {tech}
-                            </Box>
-                          ))}
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-
-                <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
-
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 4 }}>
-                  <Box>
-                    <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5, color: '#3b82f6' }}>
-                      <TrendingUp size={24} /> 지원자 강점
-                    </Typography>
-                    <Box sx={{ pl: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {summaryData?.strengths?.map((point, idx) => (
-                        <Typography key={idx} variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>▪ {point}</Typography>
-                      ))}
-                    </Box>
-                  </Box>
-                  <Box>
-                    <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5, color: '#fbbf24' }}>
-                      <AlertTriangle size={24} /> 지원자 약점 및 집중 질문
-                    </Typography>
-                    <Box sx={{ pl: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {summaryData?.weakPoints?.map((point, idx) => (
-                        <Typography key={idx} variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>▪ {point}</Typography>
-                      ))}
-                    </Box>
-                  </Box>
-                </Box>
-              </Box>
-            </Paper>
-
-            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-              <Button
-                variant="contained"
-                size="large"
-                sx={{
-                  px: 6, py: 2, fontSize: '1.2rem', borderRadius: 8,
-                  background: 'linear-gradient(45deg, #7c3aed 0%, #06b6d4 100%)',
-                  color: 'white',
-                  '&:hover': { transform: 'scale(1.05)' },
-                  transition: 'transform 0.2s',
-                }}
-                endIcon={<ArrowRight />}
-                onClick={async () => { await startInterview(summaryData); }}
-              >
-                🚀 실전 면접 시작하기
-              </Button>
-            </Box>
-          </motion.div>
-        </Box>
-      </div>
-    );
-  };
 
   // ===== Page 3 (Interview) =====
   const renderInterview = () => (
@@ -665,7 +453,13 @@ function App() {
             {currentPage === 'home' && (
               <HomePage onSubmit={handleUpload} onError={setErrorMsg} />
             )}
-            {currentPage === 'summary' && renderSummary()}
+            {currentPage === 'summary' && (
+              <SummaryPage
+                data={summaryData}
+                loading={isUploading}
+                onStart={startInterview}
+              />
+            )}
             {currentPage === 'interview' && renderInterview()}
             {currentPage === 'report' && renderReport()}
           </PageTransition>
