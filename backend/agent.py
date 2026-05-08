@@ -8,6 +8,7 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from dotenv import load_dotenv
 import json
 import os
+import operator
 
 load_dotenv()
 
@@ -20,7 +21,7 @@ class InterviewState(TypedDict):
     messages: Annotated[list, add_messages]   # 채팅 기록
     question_count: int                       # 진행된 질문 수
     max_questions: int                        # 최대 질문 수
-    evaluations: List[Dict]                   # 턴별 평가 결과
+    evaluations: Annotated[List[Dict], operator.add]  # 턴별 평가 결과 (누적)
     final_report: Optional[Dict]              # 최종 리포트
 
 
@@ -112,19 +113,33 @@ def evaluator_node(state: InterviewState) -> dict:
     evaluation["question"] = last_question
     evaluation["answer"] = last_answer
 
-    return {"evaluations": state.get("evaluations", []) + [evaluation]}
+    return {"evaluations": [evaluation]}
 
 
 def report_node(state: InterviewState) -> dict:
     """리포트 생성기: 누적 평가를 종합하여 최종 리포트 생성"""
     evals_str = json.dumps(state.get("evaluations", []), ensure_ascii=False, indent=2)
     prompt = REPORT_SYSTEM.format(evaluations=evals_str)
-    response = eval_llm.invoke([HumanMessage(content=prompt)])
+    response = eval_llm.invoke([
+        SystemMessage(content="당신은 기술 면접 분석 전문가입니다. 주어진 면접 평가 내역을 바탕으로 지원자의 역량을 수치화하고 종합 피드백을 제공하세요."),
+        HumanMessage(content=prompt)
+    ])
 
     try:
-        final_report = json.loads(response.content)
-    except json.JSONDecodeError:
-        final_report = {"raw": response.content}
+        # JSON 문자열만 추출 (간혹 LLM이 마크다운 블록을 포함할 수 있으므로)
+        content = response.content
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0].strip()
+            
+        final_report = json.loads(content)
+    except Exception as e:
+        print(f"Report JSON parsing error: {e}")
+        final_report = {
+            "scores": {"cs_fundamentals": 50, "framework_usage": 50, "problem_solving": 50, "communication": 50},
+            "feedback": {"strengths": "평가 데이터를 파싱하는 데 문제가 발생했습니다.", "weaknesses": "N/A", "improvements": []}
+        }
 
     return {"final_report": final_report}
 
