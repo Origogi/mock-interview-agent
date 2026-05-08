@@ -62,6 +62,11 @@ const darkTheme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: `
+        #root {
+          width: 100%;
+          margin: 0;
+          padding: 0;
+        }
         ::-webkit-scrollbar {
           width: 8px;
           height: 8px;
@@ -561,10 +566,10 @@ function App() {
   // 랜더링 함수: Page 3 (Interview Chat)
   const renderInterview = () => {
     return (
-      <motion.div key="interview" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
-        <Grid container spacing={3} sx={{ height: '80vh', mt: 1 }}>
+      <motion.div key="interview" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }} style={{ width: '100%' }}>
+        <Box sx={{ display: 'flex', gap: 3, width: '100%', minWidth: '860px', height: '80vh', mt: 1 }}>
           {/* Left Panel: Dashboard */}
-          <Grid item xs={12} md={4} sx={{ display: 'flex', flexDirection: 'column', gap: 3, height: '100%' }}>
+          <Box sx={{ width: '280px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 3, height: '100%' }}>
             <Paper sx={{ p: 3, backgroundColor: 'background.paper', backdropFilter: 'blur(16px)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -617,10 +622,10 @@ function App() {
                 ))
               )}
             </Paper>
-          </Grid>
+          </Box>
 
           {/* Right Panel: Chat Room */}
-          <Grid item xs={12} md={8} sx={{ height: '100%' }}>
+          <Box sx={{ flex: 1, minWidth: 0, height: '100%' }}>
             <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'background.paper', backdropFilter: 'blur(16px)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden' }}>
               
               {/* Chat Header */}
@@ -724,8 +729,8 @@ function App() {
                 />
               </Box>
             </Paper>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </motion.div>
     );
   };
@@ -779,13 +784,20 @@ function App() {
         </Alert>
       </Snackbar>
 
-      <Container maxWidth={currentPage === 'interview' ? false : 'md'} sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', py: 4, transition: 'max-width 0.5s ease' }}>
-        <AnimatePresence mode="wait">
-          {currentPage === 'home' && <Box key="home">{renderHome()}</Box>}
-          {currentPage === 'summary' && <Box key="summary">{renderSummary()}</Box>}
-          {currentPage === 'interview' && <Box key="interview" sx={{ width: '100%' }}>{renderInterview()}</Box>}
-        </AnimatePresence>
-      </Container>
+      {currentPage === 'interview' ? (
+        <Box sx={{ width: '100%', minWidth: '900px', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', py: 4, px: 4 }}>
+          <AnimatePresence mode="wait">
+            <Box key="interview" sx={{ width: '100%' }}>{renderInterview()}</Box>
+          </AnimatePresence>
+        </Box>
+      ) : (
+        <Container maxWidth="md" sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', py: 4 }}>
+          <AnimatePresence mode="wait">
+            {currentPage === 'home' && <Box key="home">{renderHome()}</Box>}
+            {currentPage === 'summary' && <Box key="summary">{renderSummary()}</Box>}
+          </AnimatePresence>
+        </Container>
+      )}
     </ThemeProvider>
   );
 }
