@@ -36,3 +36,7 @@ FastAPI 서버와 LangChain/LangGraph 기반의 AI 에이전트 구조가 정의
 * **[UI/UX 리뷰어 페르소나 및 가이드라인 👉](./design/gemini.md)**
   * 프리텐다드 폰트, 여백, 곡률 등 픽셀 퍼펙트(Pixel-perfect) 지향 원칙
   * 프론트엔드 개발 시 필수 통과해야 하는 검수 룰
+* **와이어프레임 (`design/assets/wireframe/`)**
+  * Page 1~4 화면별 레이아웃 와이어프레임 (PNG)
+* **실제 구현 스크린샷 (`design/assets/prod_screentshot/`)**
+  * Page 1~3 실제 구현 화면 스크린샷

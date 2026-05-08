@@ -23,3 +23,23 @@
 ### ⚙️ 협업 프로세스 (Workflow)
 - 기획서(Storyboard) 기반의 화면 설계 시 레이아웃 피드백을 제공합니다.
 - 프론트엔드 개발자가 새로운 화면을 퍼블리싱하거나 UI를 변경할 때마다, 이 페르소나를 호출하여 **"UI/UX 검수 및 퀄리티 컨트롤"**을 통과시켜야만 다음 단계로 넘어갈 수 있습니다.
+
+## 📁 디자인 에셋 (Design Assets)
+
+### 와이어프레임 (`assets/wireframe/`)
+| 파일 | 설명 |
+|------|------|
+| [wireframe_page1.png](./assets/wireframe/wireframe_page1.png) | Page 1 — 홈 화면 (이력서 업로드) |
+| [wireframe_page2.png](./assets/wireframe/wireframe_page2.png) | Page 2 — 이력서 요약 확인 |
+| [wireframe_page3_collapsed.png](./assets/wireframe/wireframe_page3_collapsed.png) | Page 3 — 면접 채팅 (히스토리 접힘) |
+| [wireframe_page3_expanded.png](./assets/wireframe/wireframe_page3_expanded.png) | Page 3 — 면접 채팅 (히스토리 펼침) |
+| [wireframe_page4.png](./assets/wireframe/wireframe_page4.png) | Page 4 — 최종 결과 리포트 |
+
+### 실제 구현 스크린샷 (`assets/prod_screentshot/`)
+| 파일 | 설명 |
+|------|------|
+| page_1.png | Page 1 — 기본 상태 |
+| page_1_attached.png | Page 1 — 파일 첨부 후 상태 |
+| page_1_loading.png | Page 1 — 업로드 로딩 중 |
+| page_2.png | Page 2 — 이력서 요약 완료 |
+| Page_3.png | Page 3 — 면접 채팅 화면 |

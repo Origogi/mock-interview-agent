@@ -4,7 +4,7 @@
 
 ## 📱 Page 1: 홈 화면 (Home & Setup)
 > 💡 **UI 와이어프레임:**
-> ![Page 1 Wireframe](./assets/wireframe_page1.png)
+> ![Page 1 Wireframe](../design/assets/wireframe/wireframe_page1.png)
 * **목적:** 서비스 첫인상 및 이력서 업로드
 * **UI 구성 (화면 중앙 집중형):**
   * **큰 타이틀:** "👔 Tech-Interviewer AI"
@@ -16,7 +16,7 @@
 
 ## 📱 Page 2: 이력서 요약 확인 화면 (Resume Summary)
 > 💡 **UI 와이어프레임:**
-> ![Page 2 Wireframe](./assets/wireframe_page2.png)
+> ![Page 2 Wireframe](../design/assets/wireframe/wireframe_page2.png)
 * **목적:** AI가 파악한 내 이력서의 핵심 내용을 확인하고 마음의 준비를 하는 단계
 * **UI 구성:**
   * **대기 상태 (Loading):** 분석이 진행되는 동안 화면 중앙에 로딩 스피너와 안내 문구 노출
@@ -46,7 +46,7 @@
 
 ## 📱 Page 4: 최종 결과 리포트 화면 (Result Dashboard)
 > 💡 **UI 와이어프레임:**
-> ![Page 4 Wireframe](./assets/wireframe_page4.png)
+> ![Page 4 Wireframe](../design/assets/wireframe/wireframe_page4.png)
 * **목적:** 면접 결과 분석 및 피드백 시각화
 * **UI 구성:**
   * **화면 전환 효과:** 팡파르 애니메이션 (`st.balloons()`) 적용.

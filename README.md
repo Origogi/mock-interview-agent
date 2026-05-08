@@ -92,3 +92,12 @@ npm run dev
 ### 2. 기술 스펙 (Tech Specs)
 * [프론트엔드 아키텍처 설계서 (React+Vite)](./frontend/gemini.md)
 * [백엔드 아키텍처 설계서 (FastAPI+LangGraph)](./backend/gemini.md)
+
+### 3. 디자인 (Design)
+* [UI/UX 디자이너 페르소나 및 검수 원칙](./design/gemini.md)
+* 와이어프레임 (`design/assets/wireframe/`)
+  * [Page 1 — 홈](./design/assets/wireframe/wireframe_page1.png)
+  * [Page 2 — 이력서 요약](./design/assets/wireframe/wireframe_page2.png)
+  * [Page 3 — 면접 채팅 (Collapsed)](./design/assets/wireframe/wireframe_page3_collapsed.png)
+  * [Page 3 — 면접 채팅 (Expanded)](./design/assets/wireframe/wireframe_page3_expanded.png)
+  * [Page 4 — 결과 리포트](./design/assets/wireframe/wireframe_page4.png)
