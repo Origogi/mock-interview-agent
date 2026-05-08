@@ -5,7 +5,7 @@ import {
   Grid, LinearProgress, TextField, IconButton, Accordion, AccordionSummary, AccordionDetails
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UploadCloud, FileText, Sparkles, CheckCircle2, Server, ServerOff, Code2, Briefcase, AlertTriangle, ArrowRight, User, Loader2, Building, TrendingUp, Send, ChevronDown, StopCircle, Bot } from 'lucide-react';
+import { UploadCloud, FileText, Sparkles, CheckCircle2, Server, ServerOff, Code2, Briefcase, AlertTriangle, ArrowRight, User, Loader2, Building, TrendingUp, Send, ChevronDown, StopCircle, Bot, FileX, MoreHorizontal } from 'lucide-react';
 import { styled } from '@mui/material/styles';
 
 // Witty loading messages
@@ -60,6 +60,25 @@ const darkTheme = createTheme({
     borderRadius: 12,
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: `
+        ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+          background: rgba(0, 0, 0, 0.1);
+          border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+      `,
+    },
     MuiButton: {
       styleOverrides: {
         root: {
@@ -100,9 +119,10 @@ function App() {
   // Page 3 States
   const [messages, setMessages] = useState([]);
   const [evaluations, setEvaluations] = useState([]);
-  const [currentQuestionCount, setCurrentQuestionCount] = useState(0);
+  const [currentQuestionCount, setCurrentQuestionCount] = useState(1);
   const maxQuestions = 5;
   const [chatInput, setChatInput] = useState('');
+  const [isAiTyping, setIsAiTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
   // Scroll to bottom of chat
@@ -577,9 +597,12 @@ function App() {
                 <CheckCircle2 size={20} color="#10b981" /> 실시간 평가 내역
               </Typography>
               {evaluations.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 5 }}>
-                  아직 평가 내역이 없습니다.<br/>첫 답변을 입력해 주세요.
-                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 6, opacity: 0.5 }}>
+                  <FileX size={48} />
+                  <Typography variant="body2" sx={{ textAlign: 'center', mt: 2 }}>
+                    아직 평가 내역이 없습니다.<br/>첫 답변을 입력해 주세요.
+                  </Typography>
+                </Box>
               ) : (
                 evaluations.map((ev, idx) => (
                   <Accordion key={idx} sx={{ backgroundColor: 'rgba(255,255,255,0.03)', mb: 1, '&:before': { display: 'none' }, borderRadius: '8px !important' }}>
@@ -622,17 +645,29 @@ function App() {
                       {msg.role === 'ai' ? <Bot size={20} /> : <User size={20} />}
                     </Avatar>
                     <Box sx={{ 
-                      maxWidth: '75%', p: 2, borderRadius: 3,
+                      maxWidth: '75%', px: 3, py: 2, borderRadius: '20px',
                       backgroundColor: msg.role === 'ai' ? 'rgba(124, 58, 237, 0.15)' : 'rgba(6, 182, 212, 0.15)',
                       border: '1px solid',
                       borderColor: msg.role === 'ai' ? 'rgba(124, 58, 237, 0.3)' : 'rgba(6, 182, 212, 0.3)',
-                      borderTopLeftRadius: msg.role === 'ai' ? 4 : 12,
-                      borderTopRightRadius: msg.role === 'user' ? 4 : 12,
+                      borderTopLeftRadius: msg.role === 'ai' ? '4px' : '20px',
+                      borderTopRightRadius: msg.role === 'user' ? '4px' : '20px',
                     }}>
-                      <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, fontFamily: msg.content.includes('{') || msg.content.includes('function') ? 'monospace' : 'inherit' }}>{msg.content}</Typography>
+                      <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{msg.content}</Typography>
                     </Box>
                   </Box>
                 ))}
+                {isAiTyping && (
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                    <Avatar sx={{ backgroundColor: '#7c3aed', width: 36, height: 36 }}>
+                      <Bot size={20} />
+                    </Avatar>
+                    <Box sx={{ px: 3, py: 2, borderRadius: '20px', backgroundColor: 'rgba(124, 58, 237, 0.1)', border: '1px solid rgba(124, 58, 237, 0.2)', borderTopLeftRadius: '4px' }}>
+                      <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1.5 }}>
+                        <MoreHorizontal size={24} color="#a78bfa" />
+                      </motion.div>
+                    </Box>
+                  </Box>
+                )}
                 <div ref={messagesEndRef} />
               </Box>
 
@@ -646,11 +681,14 @@ function App() {
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyDown={(e) => {
+                    if (e.nativeEvent.isComposing) return;
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
                       if (chatInput.trim()) {
                         setMessages([...messages, { role: 'user', content: chatInput.trim() }]);
                         setChatInput('');
+                        setIsAiTyping(true); // 임시 시뮬레이션
+                        setTimeout(() => setIsAiTyping(false), 2000);
                       }
                     }
                     if (e.key === 'Tab') {
@@ -661,20 +699,21 @@ function App() {
                   variant="outlined"
                   InputProps={{
                     sx: { 
-                      backgroundColor: 'rgba(255,255,255,0.05)', 
+                      backgroundColor: 'rgba(255,255,255,0.08)', 
                       borderRadius: 3,
                       '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
-                      '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
-                      '&.Mui-focused fieldset': { borderColor: '#06b6d4' },
-                      fontFamily: 'monospace'
+                      '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
+                      '&.Mui-focused fieldset': { borderColor: '#06b6d4' }
                     },
                     endAdornment: (
                       <IconButton 
-                        color="secondary" 
+                        color="primary" 
                         onClick={() => {
                           if (chatInput.trim()) {
                             setMessages([...messages, { role: 'user', content: chatInput.trim() }]);
                             setChatInput('');
+                            setIsAiTyping(true); // 임시 시뮬레이션
+                            setTimeout(() => setIsAiTyping(false), 2000);
                           }
                         }}
                       >
@@ -740,7 +779,7 @@ function App() {
         </Alert>
       </Snackbar>
 
-      <Container maxWidth={currentPage === 'interview' ? 'xl' : 'md'} sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', py: 4, transition: 'max-width 0.5s ease' }}>
+      <Container maxWidth={currentPage === 'interview' ? false : 'md'} sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', py: 4, transition: 'max-width 0.5s ease' }}>
         <AnimatePresence mode="wait">
           {currentPage === 'home' && <Box key="home">{renderHome()}</Box>}
           {currentPage === 'summary' && <Box key="summary">{renderSummary()}</Box>}
