@@ -2,7 +2,6 @@
 
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Vite](https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E)
-![MUI](https://img.shields.io/badge/MUI-%230081CB.svg?style=for-the-badge&logo=mui&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
 ![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
@@ -28,7 +27,7 @@
 
 ## 🛠 기술 스택 (Tech Stack)
 
-* **Frontend:** React (Vite), MUI (Material-UI), Recharts (차트 시각화)
+* **Frontend:** React (Vite), CSS-only (Glassmorphism), Framer Motion, Recharts (차트 시각화)
 * **Backend & Agent:** Python, FastAPI, LangGraph, LangChain
 * **LLM:** OpenAI (`gpt-4o-mini`)
 * **Data Processing:** PyPDF2 (이력서 텍스트 파싱)

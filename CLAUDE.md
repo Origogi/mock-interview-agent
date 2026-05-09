@@ -14,7 +14,7 @@
 ## 기술 스택
 | 영역 | 기술 |
 |------|------|
-| Frontend | React (Vite), MUI v5, Framer Motion, Recharts |
+| Frontend | React (Vite), CSS-only, Framer Motion, Recharts |
 | Backend | Python, FastAPI, LangGraph, LangChain |
 | LLM | OpenAI `gpt-4o-mini` |
 | Package | `uv` (backend), `npm` (frontend) |

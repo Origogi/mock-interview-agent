@@ -10,7 +10,7 @@
 | Routing | 단일 컴포넌트(`App.jsx`) 내부 `useState` 기반 SPA 전환 (외부 라우터 미사용) |
 | Animation | Framer Motion (Page 4 Recharts 진입), 그 외 페이지는 CSS 애니메이션 |
 | Charts | Recharts (Page 4 결과 리포트) |
-| UI Library | MUI (Material-UI) v5 — Page 4 잔존 의존성. Page 1/2/3은 CSS-only로 마이그레이션 완료 |
+| Styling | CSS-only (Glassmorphism 디자인 시스템) |
 | Icons | Lucide React (Page 1, 4) |
 
 ## 2. 디자인 시스템
@@ -28,7 +28,7 @@ Phase 5에서 Apple-style 미니멀리즘으로 전환. Page 1/2/3 적용 완료
 
 CSS 토큰은 `src/index.css` 상단 + `src/tokens.css` 에 정의되어 있고, 페이지별 컴포넌트(`HomePage.jsx`, `SummaryPage.jsx`, `InterviewPage.jsx`)에서 일관 사용합니다.
 
-> Page 4 (`renderReport()` in `App.jsx`)는 아직 v1(MUI Glassmorphism) 기준입니다. Phase 5 잔여 과제로 `planning/todo.md` 5.2 참고.
+> Page 4 (`renderReport()` in `App.jsx`)의 리디자인은 진행 중입니다. 자세한 내용은 `planning/todo.md` 5.2를 참고하세요.
 
 ## 3. 화면 흐름 (Page Flow)
 
