@@ -1,3 +1,5 @@
+import DebugMenu from '../debug/DebugMenu.jsx';
+
 const STEPS = [
   { k: 'home', label: '01 · 시작' },
   { k: 'summary', label: '02 · 분석' },
@@ -5,7 +7,7 @@ const STEPS = [
   { k: 'report', label: '04 · 리포트' },
 ];
 
-export default function TopBar({ currentPage, serverStatus, accent = '#6e74ff' }) {
+export default function TopBar({ currentPage, serverStatus, onSelectSampleResume, accent = '#6e74ff' }) {
   const ok = serverStatus === 'connected';
   const checking = serverStatus === 'checking';
   const dotColor = checking ? '#a1a1aa' : ok ? '#34c759' : '#ff453a';
@@ -29,6 +31,7 @@ export default function TopBar({ currentPage, serverStatus, accent = '#6e74ff' }
           style={{ background: dotColor, boxShadow: `0 0 8px ${dotColor}` }}
         />
         API {checking ? 'Checking…' : ok ? 'Connected' : 'Offline'}
+        <DebugMenu onSelectSampleResume={onSelectSampleResume} />
       </div>
     </div>
   );

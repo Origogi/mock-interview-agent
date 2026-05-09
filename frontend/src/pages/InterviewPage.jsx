@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import SampleAnswerButton from '../debug/SampleAnswerButton.jsx';
 
 const ACCENT = '#6e74ff';
 const TOAST_MS = 2600;
@@ -11,7 +12,9 @@ export default function InterviewPage({
   chatInput,
   setChatInput,
   isAiTyping,
+  isFetchingSample,
   onSend,
+  onFillSampleAnswer,
   onAbort,
   accent = ACCENT,
 }) {
@@ -114,11 +117,13 @@ export default function InterviewPage({
   const isStreaming = streaming.idx !== -1 && streaming.revealed < streaming.tokens.length;
   const busy = isAiTyping || isStreaming;
   const finished = currentQuestionCount > maxQuestions;
-  const inputDisabled = busy || finished;
+  const inputDisabled = busy || finished || isFetchingSample;
 
   const progressPct = Math.min((Math.max(currentQuestionCount, 1) - 1) / maxQuestions, 1) * 100;
 
-  const placeholder = isAiTyping
+  const placeholder = isFetchingSample
+    ? '샘플 답변 생성 중…'
+    : isAiTyping
     ? '면접관이 분석 중이에요…'
     : isStreaming
     ? '면접관이 말하는 중이에요…'
@@ -288,6 +293,14 @@ export default function InterviewPage({
 
         <div className="iv-input-wrap">
           <div className={`iv-input ${busy ? 'is-disabled' : ''}`}>
+            {/* Sample Answer Button */}
+            <div style={{ marginBottom: '12px' }}>
+              <SampleAnswerButton
+                onPick={onFillSampleAnswer}
+                disabled={finished || isAiTyping}
+                isLoading={isFetchingSample}
+              />
+            </div>
             <textarea
               ref={textareaRef}
               className="iv-textarea"

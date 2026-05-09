@@ -6,6 +6,7 @@ import ReportPage from './pages/ReportPage.jsx';
 import TopBar from './components/TopBar.jsx';
 import PageTransition from './components/PageTransition.jsx';
 import Toast from './components/Toast.jsx';
+import { FIXTURE_SAMPLE_RESUME } from './debug/fixtures.js';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -21,6 +22,7 @@ function App() {
   const maxQuestions = 5;
   const [chatInput, setChatInput] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
+  const [isFetchingSample, setIsFetchingSample] = useState(false);
   const [threadId, setThreadId] = useState(null);
   const [finalReport, setFinalReport] = useState(null);
 
@@ -127,6 +129,28 @@ function App() {
     }
   };
 
+  const handleFillSampleAnswer = async (tier) => {
+    if (!threadId || isFetchingSample || isAiTyping) return;
+    setIsFetchingSample(true);
+    try {
+      const res = await fetch('http://localhost:8000/api/debug/sample-answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ thread_id: threadId, quality_tier: tier }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setChatInput(data.answer);
+      } else {
+        setErrorMsg(`샘플 답변 실패: ${data.detail || '알 수 없음'}`);
+      }
+    } catch {
+      setErrorMsg('샘플 답변 호출 실패: 백엔드 확인 필요');
+    } finally {
+      setIsFetchingSample(false);
+    }
+  };
+
   const restartFromReport = () => {
     setCurrentPage('home');
     setMessages([]);
@@ -134,9 +158,15 @@ function App() {
     setFinalReport(null);
   };
 
+  const handleDebugSampleResume = () => {
+    setSummaryData(FIXTURE_SAMPLE_RESUME);
+    setErrorMsg('');
+    setCurrentPage('summary');
+  };
+
   return (
     <div className="app">
-      <TopBar currentPage={currentPage} serverStatus={serverStatus} />
+      <TopBar currentPage={currentPage} serverStatus={serverStatus} onSelectSampleResume={handleDebugSampleResume} />
 
       <div className="viewport">
         <PageTransition pageKey={currentPage}>
@@ -159,7 +189,9 @@ function App() {
               chatInput={chatInput}
               setChatInput={setChatInput}
               isAiTyping={isAiTyping}
+              isFetchingSample={isFetchingSample}
               onSend={sendAnswer}
+              onFillSampleAnswer={handleFillSampleAnswer}
               onAbort={() => alert('면접 조기 종료 및 결과 보기 (Page 4 이동)')}
             />
           )}

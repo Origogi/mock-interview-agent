@@ -213,6 +213,39 @@
 
 ---
 
+### F-28. 디버그 모드 — 샘플 답변 채우기 [구현 완료, 시각 후속 패치 진행 중]
+**왜**: Page 3 실전 면접 흐름의 답변 입력을 LLM으로 자동 생성해 빠른 검증·데모. 다양한 점수대(Best 8~10 / Good 4~7 / Bad 1~3) 답변을 즉시 비교해 evaluator·report 분기를 효율적으로 테스트.
+
+**범위**
+- InterviewPage(Page 3) composer 상단 좌측 ✨ 버튼 + 위로 솟는 드롭업 (3 등급 항목)
+- 항목 클릭 → 동기 LLM 호출 (1~3초) → composer disable + 로딩 UI → textarea에 일괄 채움
+- **자동 전송 X**: 사용자가 검토 후 직접 Send
+
+**API**
+- `POST /api/debug/sample-answer` body `{ thread_id, quality_tier: 'best'|'good'|'bad' }` → `{ answer, expected_score_range }`
+- LangGraph **미사용**. `tools.py`의 `@tool` 함수(`generate_sample_answer`)를 endpoint가 직접 `.invoke()` 호출 (`extract_resume_text` 컨벤션 준용).
+- 컨텍스트 추출: `state.values["messages"]` (이전 턴) + `state.tasks[*].interrupts[0].value` (현재 미답변 질문) + `resume_summary` 모두 프롬프트에 투입.
+
+**UI 사양서**
+`design/assets/redesign/F28-sample-answer-spec.md` (디자이너 산출).
+
+**구현 결정 (PM 합의)**
+- 버튼 위치는 TopBar Debug 메뉴가 아닌 **InterviewPage 인-페이지 컨트롤** (composer 인접)
+- 단일 ✨ 버튼 + 드롭업 (3-칩 평면 노출 X — 디버그 노이즈 최소화)
+- finished/isAiTyping 시 **버튼 hidden** (디자이너 권장)
+- IME 회귀 방지: `setChatInput()`만 사용, `textareaRef` 직접 조작 X
+- 별도 `isFetchingSample` state — `isAiTyping` 재사용 X
+
+**구현 팀**
+- 디자이너: 버튼/드롭업/로딩 UI 사양서
+- 백엔드: `tools.py` `generate_sample_answer` + `/api/debug/sample-answer` 엔드포인트
+- 프론트엔드: `SampleAnswerButton.jsx` + `App.jsx` 핸들러 + `InterviewPage.jsx` 통합
+
+**잔여**
+- 디자이너 사양서 ↔ FE v0 구현 시각 갭 패치 (버튼 28×28 정사각형, radius 8px, 로딩 이중 피드백, 드롭업 헤더)
+
+---
+
 ### 백로그 운영 원칙
 
 1. **진실의 원천(SSOT)은 이 표.** `todo.md`의 Phase 5 체크리스트는 진행 추적용이고, 무엇을 할지/뺄지는 여기서 결정.

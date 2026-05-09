@@ -1,12 +1,13 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 import os
 import tempfile
 from dotenv import load_dotenv
 from agent import graph, parser_graph
 from langgraph.types import Command
+from tools import generate_sample_answer
 
 load_dotenv() # Load variables from .env
 
@@ -112,6 +113,58 @@ async def chat(request: ChatRequest):
             "is_finished": True,
             "final_report": current_values.get("final_report"),
         }
+
+
+# ─────────────────────────────────────────
+# Debug API
+# ─────────────────────────────────────────
+class SampleAnswerRequest(BaseModel):
+    thread_id: str
+    quality_tier: str  # "best", "good", or "bad"
+
+
+@app.post("/api/debug/sample-answer")
+async def sample_answer(request: SampleAnswerRequest):
+    """Generate a sample answer for the current pending question at a specified quality tier.
+
+    Used for debugging and testing the interview flow.
+    """
+    # Validate quality_tier
+    valid_tiers = {"best", "good", "bad"}
+    if request.quality_tier not in valid_tiers:
+        raise HTTPException(
+            status_code=400,
+            detail=f"quality_tier must be one of {sorted(valid_tiers)}"
+        )
+
+    # Check if interview session has started (has pending question)
+    config = {"configurable": {"thread_id": request.thread_id}}
+    state = graph.get_state(config)
+    current_values = state.values
+
+    interrupts = []
+    for task in state.tasks:
+        interrupts.extend(task.interrupts)
+
+    if not interrupts:
+        raise HTTPException(
+            status_code=400,
+            detail="면접이 시작되지 않았습니다. 먼저 /api/chat로 면접을 시작하세요."
+        )
+
+    try:
+        result = generate_sample_answer.invoke({
+            "thread_id": request.thread_id,
+            "quality_tier": request.quality_tier
+        })
+        return {
+            "answer": result["answer"],
+            "expected_score_range": result["expected_score_range"]
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate sample answer: {str(e)}")
 
 
 if __name__ == "__main__":
