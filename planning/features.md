@@ -159,7 +159,7 @@
 | # | 항목 | 분류 | 근거 |
 |---|------|------|------|
 | N1 | 면접 난이도 조절 (Junior/Mid/Hardcore) | FE / BE / Feature | 큰 작업. 핵심 가치 "긴장감" 보강. |
-| N2 | 모션 토큰 (duration/easing) 상수화 | FE / DevTODO | 현재 cubic-bezier 인라인 산재. 리팩터. |
+| ~~N2~~ ✅ | ~~모션 토큰 (duration/easing) 상수화~~ — `tokens.css`에 `--ease-soft/in-quick/spring`, `--dur-quick/fast/medium/slow/page` 추가. `index.css`의 cubic-bezier 17곳 + duration 30+곳 시멘틱 토큰으로 치환. | FE / DevTODO | 완료 |
 | N3 | MUI Theme 잔존 의존성 정리 | FE / DevTODO | Page 4 리디자인 후 ThemeProvider 제거 가능 시점. |
 | N4 | 백엔드 테스트 (pytest + 그래프 mock) | BE / DevTODO | 현재 0개. 회귀 방지. |
 | N5 | 로깅 개선 (`print` → `logging`, thread_id 추적) | BE / DevTODO | 운영 단계 작업. |

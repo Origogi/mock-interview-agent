@@ -51,7 +51,7 @@
   border: none;
   cursor: pointer;
   font-family: var(--font-text);
-  transition: transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease;
+  transition: transform var(--dur-fast) ease, opacity var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .btn.big { padding: 18px 32px; font-size: 17px; }
 .btn-primary { color: white; box-shadow: 0 8px 30px -10px rgba(110, 116, 255, 0.6); }
@@ -69,7 +69,7 @@
   font-family: var(--font-text);
 }
 .btn-link:hover { color: var(--fg); }
-.btn .arr { display: inline-block; transition: transform 0.18s ease; }
+.btn .arr { display: inline-block; transition: transform var(--dur-fast) ease; }
 .btn:hover .arr { transform: translateX(4px); }
 
 .section-h,
@@ -185,10 +185,10 @@
   will-change: opacity, transform, filter;
 }
 .page-transition.is-in {
-  animation: page-in 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  animation: page-in 0.5s var(--ease-soft) both;
 }
 .page-transition.is-out {
-  animation: page-out 0.28s cubic-bezier(0.4, 0, 0.7, 0) both;
+  animation: page-out 0.28s var(--ease-in-quick) both;
   pointer-events: none;
 }
 @keyframes page-in {
@@ -233,7 +233,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  transition: border-color 0.2s, transform 0.2s, background 0.2s;
+  transition: border-color var(--dur-fast), transform var(--dur-fast), background var(--dur-fast);
 }
 .drop.is-drag {
   border-color: var(--accent);
@@ -356,7 +356,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   padding: 32px;
-  transition: transform 0.2s, border-color 0.2s;
+  transition: transform var(--dur-fast), border-color var(--dur-fast);
 }
 .how-card:hover {
   transform: translateY(-2px);
@@ -404,18 +404,18 @@
   gap: 18px;
 }
 .summary-loader-fade.is-leaving {
-  animation: summary-loader-out 0.4s ease both;
+  animation: summary-loader-out var(--dur-slow) ease both;
 }
 @keyframes summary-loader-out {
   to { opacity: 0; transform: scale(0.96); filter: blur(8px); }
 }
-.summary-loaded-fade { animation: summary-loaded-in 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+.summary-loaded-fade { animation: summary-loaded-in 0.7s var(--ease-soft) both; }
 @keyframes summary-loaded-in {
   0%   { opacity: 0; transform: translateY(16px) scale(0.99); filter: blur(6px); }
   60%  { opacity: 1; filter: blur(0); }
   100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
-.summary-loaded-fade > * { animation: summary-stagger 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+.summary-loaded-fade > * { animation: summary-stagger var(--dur-page) var(--ease-soft) both; }
 .summary-loaded-fade > *:nth-child(1) { animation-delay: 0.05s; }
 .summary-loaded-fade > *:nth-child(2) { animation-delay: 0.12s; }
 .summary-loaded-fade > *:nth-child(3) { animation-delay: 0.19s; }
@@ -608,7 +608,7 @@
   color: #ff6b6b; border-radius: 12px; cursor: pointer;
   font-size: 13px; font-weight: 500;
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  transition: all 0.15s;
+  transition: all var(--dur-quick);
 }
 .iv-end:hover { background: rgba(255,107,107,0.08); border-color: #ff6b6b; }
 .iv-end-x { font-size: 16px; line-height: 1; }
@@ -626,7 +626,7 @@
 .iv-empty-s { font-size: 12px; color: var(--fg-dim); }
 
 .iv-eval-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
-.iv-eval { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: border-color 0.2s ease; }
+.iv-eval { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: border-color var(--dur-fast) ease; }
 .iv-eval.is-open { border-color: var(--border-strong); }
 .iv-eval-row {
   width: 100%; padding: 12px 14px;
@@ -642,7 +642,7 @@
 .iv-eval-detail-wrap {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: grid-template-rows 0.32s var(--ease-soft);
 }
 .iv-eval.is-open .iv-eval-detail-wrap { grid-template-rows: 1fr; }
 .iv-eval-detail-inner { overflow: hidden; min-height: 0; }
@@ -657,7 +657,7 @@
 .iv-eval-fb { font-size: 12px; line-height: 1.55; color: var(--fg-muted); }
 .iv-eval-row .iv-eval-chev {
   margin-left: auto; font-size: 12px; color: var(--fg-dim);
-  transition: transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: transform var(--dur-medium) var(--ease-soft);
 }
 .iv-eval.is-open .iv-eval-chev { transform: rotate(180deg); }
 
@@ -716,12 +716,12 @@
 }
 .bubble-body.typing { display: inline-flex; gap: 4px; padding: 4px 0; background: transparent; border: none; }
 .td { width: 6px; height: 6px; border-radius: 50%; background: var(--fg-muted); animation: pulse 1.4s ease-in-out infinite; }
-.td:nth-child(2) { animation-delay: 0.15s; }
-.td:nth-child(3) { animation-delay: 0.3s; }
+.td:nth-child(2) { animation-delay: var(--dur-quick); }
+.td:nth-child(3) { animation-delay: var(--dur-medium); }
 
 /* Claude-style bubble entry */
-.bubble-enter { animation: bubble-in 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
-.bubble-user.bubble-enter { animation: bubble-in-user 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+.bubble-enter { animation: bubble-in var(--dur-slow) var(--ease-soft) both; }
+.bubble-user.bubble-enter { animation: bubble-in-user 0.35s var(--ease-soft) both; }
 @keyframes bubble-in {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -791,14 +791,14 @@
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.4);
   font-size: 14px;
-  animation: app-toast-in 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  animation: app-toast-in var(--dur-slow) var(--ease-soft) both;
 }
 .app-toast-msg { line-height: 1.5; }
 .app-toast-close {
   background: transparent; border: none; color: var(--fg-muted);
   font-size: 22px; line-height: 1; cursor: pointer;
   padding: 2px 6px; border-radius: 6px;
-  transition: color 0.15s, background 0.15s;
+  transition: color var(--dur-quick), background var(--dur-quick);
 }
 .app-toast-close:hover { color: var(--fg); background: rgba(255,255,255,0.06); }
 @keyframes app-toast-in {
@@ -816,7 +816,7 @@
   border-left: 3px solid var(--toast-accent);
   border-radius: 14px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-  animation: toast-in 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  animation: toast-in var(--dur-slow) var(--ease-soft) both;
 }
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(-8px) scale(0.96); }
@@ -828,7 +828,7 @@
 .eval-toast-d { font-size: 13px; color: var(--fg); margin-top: 2px; }
 
 /* Fresh eval card highlight */
-.iv-eval.is-fresh { animation: eval-fresh 0.6s ease-out both; }
+.iv-eval.is-fresh { animation: eval-fresh var(--dur-page) ease-out both; }
 @keyframes eval-fresh {
   from { background: color-mix(in oklch, var(--accent, #888) 18%, transparent); transform: translateX(-4px); opacity: 0; }
   to   { background: transparent; transform: translateX(0); opacity: 1; }
@@ -847,7 +847,7 @@
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 18px;
   padding: 16px 18px;
-  transition: border-color 0.15s;
+  transition: border-color var(--dur-quick);
 }
 .iv-input:focus-within { border-color: var(--border-strong); }
 .iv-textarea {
@@ -869,7 +869,7 @@
   padding: 10px 20px; border-radius: var(--radius-pill);
   border: none; color: white; font-weight: 600; font-size: 14px;
   cursor: pointer; font-family: var(--font-text);
-  transition: opacity 0.15s, transform 0.15s;
+  transition: opacity var(--dur-quick), transform var(--dur-quick);
 }
 .iv-send:disabled { opacity: 0.4; cursor: default; }
 .iv-send:not(:disabled):hover { transform: translateY(-1px); }
@@ -908,7 +908,7 @@
   display: flex;
   flex-direction: column;
   gap: 56px;
-  animation: report-fade-in 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  animation: report-fade-in var(--dur-page) var(--ease-soft) both;
 }
 @keyframes report-fade-in {
   from { opacity: 0; transform: translateY(12px); }
@@ -942,7 +942,7 @@
   flex-direction: column;
   gap: 12px;
   opacity: 0;
-  animation: kpi-rise 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  animation: kpi-rise var(--dur-page) var(--ease-soft) both;
 }
 @keyframes kpi-rise {
   from { opacity: 0; transform: translateY(14px); }
@@ -1023,7 +1023,7 @@
   transform-box: view-box;
   transform-origin: 50% 50%;
   transform: scale(0);
-  animation: radar-grow 0.85s cubic-bezier(0.22, 0.61, 0.36, 1) 0.55s forwards;
+  animation: radar-grow 0.85s var(--ease-soft) 0.55s forwards;
 }
 @keyframes radar-grow {
   to { transform: scale(1); }
@@ -1033,7 +1033,7 @@
   transform-box: fill-box;
   transform-origin: center;
   transform: scale(0);
-  animation: vertex-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: vertex-pop var(--dur-slow) var(--ease-spring) forwards;
 }
 @keyframes vertex-pop {
   to { transform: scale(1); }
@@ -1067,7 +1067,7 @@
   background: var(--accent);
   border-radius: 999px;
   width: 0;
-  animation: legend-fill 0.9s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation: legend-fill 0.9s var(--ease-soft) forwards;
 }
 @keyframes legend-fill {
   from { width: 0; }
@@ -1129,7 +1129,7 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   overflow: hidden;
-  transition: border-color 0.2s;
+  transition: border-color var(--dur-fast);
 }
 .qa-item.is-open { border-color: var(--border-strong); }
 .qa-summary {
@@ -1163,13 +1163,13 @@
 .qa-text { font-size: 14px; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .qa-chev {
   color: var(--fg-muted);
-  transition: transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: transform var(--dur-medium) var(--ease-soft);
 }
 .qa-item.is-open .qa-chev { transform: rotate(180deg); }
 .qa-detail-wrap {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: grid-template-rows 0.35s var(--ease-soft);
 }
 .qa-item.is-open .qa-detail-wrap { grid-template-rows: 1fr; }
 .qa-detail {
@@ -1224,7 +1224,7 @@
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
+  transition: background var(--dur-fast), transform var(--dur-quick);
 }
 .restart-btn:hover {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
