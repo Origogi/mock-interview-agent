@@ -17,31 +17,39 @@
 Tech-Interviewer AI는 단순 단일 프롬프트 챗봇이 아니라 **상태 기반 워크플로우(State-based Workflow)** 입니다. 사용자(프론트엔드) 입력을 대기하기 위해 그래프 실행을 멈추고(Interrupt), 입력이 들어오면 평가와 다음 질문 생성을 반복합니다.
 
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'fontFamily': 'Inter, system-ui, sans-serif',
+    'lineColor': '#94a3b8'
+  }
+}}%%
 graph TD
-    START((시작)) --> Node1[Node 1: Resume Parser]
+    START([🚀 시작]) --> Node1[<b>Node 1</b><br/>📄 Resume Parser]
 
-    Node1 --> Pause1(((⏸️ 프론트엔드 대기<br>Page 2 요약 화면)))
+    Node1 -.->|invoke| Tool1[🔧 <b>extract_resume_text</b><br/><i>file_path: str → str</i>]
+    Node1 --> Pause1[/⏸️ 프론트엔드 대기<br/><i>Page 2 요약 화면</i>/]
 
-    Pause1 -- "[면접 시작] 클릭" --> Node2[Node 2: Interviewer]
+    Pause1 -->|면접 시작 클릭| Node2[<b>Node 2</b><br/>🎤 Interviewer]
+    Node2 --> Pause2[/⏸️ 프론트엔드 대기<br/><i>Page 3 답변 입력</i>/]
+    Pause2 -->|사용자 답변 제출| Node3[<b>Node 3</b><br/>📊 Evaluator]
+    Node3 --> Check{<b>질문 횟수<br/>도달?</b>}
 
-    Node2 --> Pause2(((⏸️ 프론트엔드 대기<br>Page 3 사용자 답변 입력)))
+    Check -->|아니오| Node2
+    Check -->|예| Node4[<b>Node 4</b><br/>📋 Report Generator]
+    Node4 --> END([🎯 면접 종료<br/>Page 4 표시])
 
-    Pause2 -- "사용자 답변 제출" --> Node3[Node 3: Evaluator]
+    classDef startEnd fill:#6e74ff,stroke:#9ca3ff,stroke-width:3px,color:#fff,font-weight:bold;
+    classDef node fill:#1e293b,stroke:#6e74ff,stroke-width:2px,color:#f8fafc;
+    classDef pause fill:#422006,stroke:#fbbf24,stroke-width:2px,color:#fde68a,stroke-dasharray: 5 5;
+    classDef condition fill:#312e81,stroke:#fbbf24,stroke-width:2px,color:#fde68a;
+    classDef tool fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#a7f3d0,stroke-dasharray: 3 3;
 
-    Node3 --> Check{질문 횟수 도달?}
-
-    Check -- "아니오 (다음 질문)" --> Node2
-    Check -- "예 (면접 종료)" --> Node4[Node 4: Report Generator]
-
-    Node4 --> END((종료 및 Page 4 표시))
-
-    classDef node fill:#1e293b,stroke:#a78bfa,stroke-width:2px,color:#fff;
-    classDef pause fill:#0f172a,stroke:#06b6d4,stroke-width:2px,color:#fff,stroke-dasharray: 5 5;
-    classDef condition fill:#334155,stroke:#fbbf24,stroke-width:2px,color:#fff;
-
+    class START,END startEnd;
     class Node1,Node2,Node3,Node4 node;
     class Pause1,Pause2 pause;
     class Check condition;
+    class Tool1 tool;
 ```
 
 ## 3. 상태 (InterviewState)
