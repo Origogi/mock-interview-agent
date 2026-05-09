@@ -47,13 +47,13 @@
 - [x] **프론트:** 한글 IME composition 가드 (자모 분리 이슈 해결)
 
 ### 5.2 Page 4 — 차트 애니메이션 + Apple-style 리디자인
-- [ ] **프론트:** Page 4 전체 리디자인 (MUI → CSS-only, hero 카운트업 + 2-컬럼 그리드 + 문항 아코디언)
-- [ ] **프론트:** 레이더 폴리곤 0→100% 부풀기 애니메이션 (rAF + cubic ease-out)
-- [ ] **프론트:** 레이더 꼭지점 스프링 팝 (transition + cubic-bezier(0.34, 1.56, 0.64, 1))
-- [ ] **프론트:** 레이더 링/축선 stagger 페이드 인
-- [ ] **프론트:** 범례 바 0% → 실제값 fill (width keyframe + stagger)
-- [ ] **프론트:** 라벨 stagger 페이드 인
-- [ ] **프론트:** Page 4 문항별 아코디언 grid-template-rows 패턴 적용
+- [x] **프론트:** Page 4 전체 리디자인 (MUI → CSS-only, hero 카운트업 + 2-컬럼 그리드 + 문항 아코디언)
+- [x] **프론트:** 레이더 폴리곤 0→100% 부풀기 애니메이션 (rAF + cubic ease-out)
+- [x] **프론트:** 레이더 꼭지점 스프링 팝 (transition + cubic-bezier(0.34, 1.56, 0.64, 1))
+- [x] **프론트:** 레이더 링/축선 stagger 페이드 인
+- [x] **프론트:** 범례 바 0% → 실제값 fill (width keyframe + stagger)
+- [x] **프론트:** 라벨 stagger 페이드 인
+- [x] **프론트:** Page 4 문항별 아코디언 grid-template-rows 패턴 적용
 
 ### 5.3 트랜지션 시스템
 - [x] **프론트:** 페이지 간 zoom + blur cross-fade 트랜지션 컴포넌트 (`<PageTransition>`)
