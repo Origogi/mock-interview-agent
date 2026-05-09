@@ -21,35 +21,41 @@ Tech-Interviewer AI는 단순 단일 프롬프트 챗봇이 아니라 **상태 �
   'theme': 'base',
   'themeVariables': {
     'fontFamily': 'Inter, system-ui, sans-serif',
-    'fontSize': '13px',
-    'lineColor': '#525252',
-    'primaryColor': '#171717',
-    'primaryTextColor': '#e5e5e5',
-    'primaryBorderColor': '#404040'
+    'fontSize': '14px',
+    'lineColor': '#9ca3af'
   }
 }}%%
-graph TD
-    START([시작]) --> Node1[Node 1<br/>Resume Parser]
+flowchart TD
+    START([Start]):::startEnd
+    Node1(Node 1<br/>Resume Parser):::parser
+    Tool1(extract_resume_text<br/><i>file_path: str → str</i>):::tool
+    Pause1[/Page 2 요약 대기/]:::pause
+    Node2(Node 2<br/>Interviewer):::interviewer
+    Pause2[/Page 3 답변 대기/]:::pause
+    Node3(Node 3<br/>Evaluator):::evaluator
+    Check{질문 횟수<br/>도달?}:::check
+    Node4(Node 4<br/>Report Generator):::report
+    END([End]):::startEnd
 
-    Node1 -.->|invoke| Tool1[extract_resume_text<br/>file_path: str → str]
-    Node1 --> Pause1[/프론트엔드 대기<br/>Page 2 요약 화면/]
-
-    Pause1 -->|면접 시작| Node2[Node 2<br/>Interviewer]
-    Node2 --> Pause2[/프론트엔드 대기<br/>Page 3 답변 입력/]
-    Pause2 -->|답변 제출| Node3[Node 3<br/>Evaluator]
-    Node3 --> Check{질문 횟수 도달?}
-
+    START --> Node1
+    Node1 -.->|invoke| Tool1
+    Node1 --> Pause1
+    Pause1 -->|면접 시작| Node2
+    Node2 --> Pause2
+    Pause2 -->|답변 제출| Node3
+    Node3 --> Check
     Check -->|아니오| Node2
-    Check -->|예| Node4[Node 4<br/>Report Generator]
-    Node4 --> END([면접 종료])
+    Check -->|예| Node4
+    Node4 --> END
 
-    classDef accent fill:#1e1e2e,stroke:#6e74ff,stroke-width:1.5px,color:#e5e5e5;
-    classDef pause fill:#171717,stroke:#525252,stroke-width:1px,color:#a3a3a3,stroke-dasharray: 4 3;
-    classDef tool fill:#0f0f0f,stroke:#404040,stroke-width:1px,color:#a3a3a3,stroke-dasharray: 3 3;
-
-    class START,END accent;
-    class Pause1,Pause2 pause;
-    class Tool1 tool;
+    classDef startEnd fill:#e0e7ff,stroke:#6366f1,stroke-width:2px,color:#3730a3,font-weight:600;
+    classDef parser fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#92400e,font-weight:500;
+    classDef interviewer fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#1e40af,font-weight:500;
+    classDef evaluator fill:#fce7f3,stroke:#ec4899,stroke-width:2px,color:#9f1239,font-weight:500;
+    classDef report fill:#d1fae5,stroke:#10b981,stroke-width:2px,color:#065f46,font-weight:500;
+    classDef check fill:#fff7ed,stroke:#fb923c,stroke-width:2px,color:#9a3412,font-weight:500;
+    classDef pause fill:#ede9fe,stroke:#a78bfa,stroke-width:1.5px,color:#5b21b6,stroke-dasharray: 5 3;
+    classDef tool fill:#f3f4f6,stroke:#6b7280,stroke-width:1.5px,color:#374151,stroke-dasharray: 5 3;
 ```
 
 ## 3. 상태 (InterviewState)
