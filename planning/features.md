@@ -121,11 +121,60 @@
 
 ---
 
-## 2. 🗂 백로그 (Backlog - 추후 반영 예정)
+## 2. 🗂 백로그 (Backlog)
 
-1. **면접 난이도 조절 기능 (Difficulty Level)**
-   * **개요:** 면접 시작 전 'Junior(쉬움)', 'Mid-level(보통)', 'Hardcore(압박)' 중 난이도를 선택하는 기능.
-   * **로직:** UI 사이드바에 난이도 조절 슬라이더를 추가하고, 선택된 난이도 변수를 System Prompt에 주입. Hardcore일 경우 꼬리 질문의 빈도(`Needs_Followup` 허들)를 높이고 더 집요하게 파고드는 페르소나 적용.
-2. **답변 제한 시간 타이머 (Tension & Timer)**
-   * **개요:** 각 질문에 대해 실시간 제한 시간(예: 3분)을 두어 긴장감을 극대화하는 기능.
-   * **로직:** UI 상에 타이머가 시각적으로 줄어들도록 배치하고, 시간이 초과되면 자동으로 턴을 넘기거나 감점 처리.
+`README.md`의 우선순위 기준(Must / Should / Nice / Icebox)에 따라 줄을 세운 통합 백로그입니다. 기획 기능과 개발 부채를 한 곳에서 관리합니다.
+
+**범례**
+- 🔴 **Must**: 발표 전 무조건. 빠지면 데모/서비스가 망가짐
+- 🟡 **Should**: 발표 전 가능하면. 핵심 가치(개인화/긴장감/피드백) 강화
+- 🟢 **Nice**: 발표 후. 안정화·확장·코드 부채
+- ⚫ **Icebox**: 언젠가, 지금은 보류
+
+**분류**
+- `FE` 프론트엔드 / `BE` 백엔드 / `Feature` 사용자 가치 / `DevTODO` 코드 부채
+
+---
+
+### 🔴 Must — 발표 전 무조건
+
+| # | 항목 | 분류 | 근거 |
+|---|------|------|------|
+| M1 | **Page 4 전체 리디자인** (MUI → CSS-only, hero 카운트업 + 2-컬럼 + 아코디언) | FE / Feature | Page 1~3는 Apple-style 적용 완료. Page 4만 남아 톤 단절. 데모 마무리 화면이라 인상 결정적. |
+| M2 | **빈 답변 / 빈 질문 가드** | BE / DevTODO | 발표 중 엔터 오타·빈 응답 시 evaluator가 빈 텍스트로 점수 매김 → 그래프 노이즈. |
+| M3 | **에러 응답 표준화 + thread_id 충돌 방지** | BE / DevTODO | 네트워크 에러·중복 호출 시 프론트 토스트 깔끔히 안내. 1~2시간. |
+
+### 🟡 Should — 발표 전 가능하면
+
+| # | 항목 | 분류 | 근거 |
+|---|------|------|------|
+| S1 | **레이더 폴리곤/꼭지점/범례 진입 애니메이션** (F-24) | FE / Feature | Page 4 임팩트의 절반. "Actionable Feedback" 핵심 가치 시각화. M1과 한 묶음. |
+| ~~S3~~ ✅ | ~~`parse_resume_with_llm`을 LangGraph Node 1로 통합~~ — `agent.py`에 `resume_parser_node` + `parser_graph` 추가. `main.py`는 HTTP routing만 담당. | BE / DevTODO | 완료 |
+| ~~S4~~ ✅ | ~~OpenAI Files API 미사용 호출 제거~~ — `client.files.create(...)` + 응답 `file_id` 삭제. | BE / DevTODO | 완료 |
+| S5 | **SSE 토큰 스트리밍** (F-21 백엔드 부분) | BE / FE | 면접관 응답 체감 속도. 현재는 클라이언트사이드 모사만. 작업량 큼. |
+| S6 | **Page 4 문항별 아코디언 grid-template-rows 패턴** (F-26 잔여) | FE | Page 3와 통일. M1 리디자인과 함께 처리. |
+
+### 🟢 Nice — 발표 후
+
+| # | 항목 | 분류 | 근거 |
+|---|------|------|------|
+| N1 | 면접 난이도 조절 (Junior/Mid/Hardcore) | FE / BE / Feature | 큰 작업. 핵심 가치 "긴장감" 보강. |
+| N2 | 모션 토큰 (duration/easing) 상수화 | FE / DevTODO | 현재 cubic-bezier 인라인 산재. 리팩터. |
+| N3 | MUI Theme 잔존 의존성 정리 | FE / DevTODO | Page 4 리디자인 후 ThemeProvider 제거 가능 시점. |
+| N4 | 백엔드 테스트 (pytest + 그래프 mock) | BE / DevTODO | 현재 0개. 회귀 방지. |
+| N5 | 로깅 개선 (`print` → `logging`, thread_id 추적) | BE / DevTODO | 운영 단계 작업. |
+| N6 | 답변 제한 시간 타이머 | FE / Feature | 핵심 가치 "긴장감" 보강. 줄어드는 게이지 + 초과 시 턴 종료. |
+
+### ⚫ Icebox
+
+새 아이디어가 들어오면 여기로. 현재 비어 있음.
+*(예: 음성 답변 입력, 다국어 면접, 결과 PDF 다운로드, 여러 이력서 비교 모드 등)*
+
+---
+
+### 백로그 운영 원칙
+
+1. **진실의 원천(SSOT)은 이 표.** `todo.md`의 Phase 5 체크리스트는 진행 추적용이고, 무엇을 할지/뺄지는 여기서 결정.
+2. **새 항목 추가 시** Icebox에 먼저 넣고, 검토 후 우선순위 부여.
+3. **Must는 3개 이내로 유지.** 늘면 발표 임박 신호 → 범위 조정.
+4. **재조정은 마일스톤마다.** 발표 끝나면 전체 한 칸씩 강등 검토 (Should → Nice 등).

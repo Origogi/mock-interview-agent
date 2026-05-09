@@ -75,12 +75,14 @@ class InterviewState(TypedDict):
 
 ## 4. 노드 (Nodes)
 
-| 노드 | 역할 | Interrupt |
-|-----|------|-----------|
-| **Node 1: Resume Parser** | PDF에서 raw text를 추출(아래 `extract_resume_text` tool 위임)한 뒤 LLM으로 기술 스택·프로젝트·핵심 역량을 JSON으로 구조화하여 `resume_summary`에 저장 | Page 2 전 대기 |
-| **Node 2: Interviewer** | `resume_summary`와 이전 `messages`를 보고 다음 질문(또는 꼬리 질문) 생성, `question_count` +1 | Page 3 답변 대기 |
-| **Node 3: Evaluator** | 사용자 답변을 평가하여 `evaluations`에 점수 + 피드백 누적 | - |
-| **Node 4: Report Generator** | 누적된 `evaluations`를 바탕으로 최종 레이더 차트 데이터 + 종합 피드백 생성 | - |
+| 노드 | 역할 | Interrupt | 소속 그래프 |
+|-----|------|-----------|----------|
+| **Node 1: Resume Parser** | PDF에서 raw text를 추출(아래 `extract_resume_text` tool 위임)한 뒤 LLM으로 기술 스택·프로젝트·핵심 역량을 JSON으로 구조화하여 `resume_summary`에 저장 | (HTTP 응답 경계) | `parser_graph` (단발) |
+| **Node 2: Interviewer** | `resume_summary`와 이전 `messages`를 보고 다음 질문(또는 꼬리 질문) 생성, `question_count` +1 | Page 3 답변 대기 | `graph` |
+| **Node 3: Evaluator** | 사용자 답변을 평가하여 `evaluations`에 점수 + 피드백 누적 | - | `graph` |
+| **Node 4: Report Generator** | 누적된 `evaluations`를 바탕으로 최종 레이더 차트 데이터 + 종합 피드백 생성 | - | `graph` |
+
+> **그래프 분리 이유**: Resume Parser는 단발성(인터럽트 없음)이라 `parser_graph`로 컴파일되어 `/api/upload`에서 호출되고, Interviewer~Report는 인터럽트 기반 멀티턴이라 `graph`로 컴파일되어 `/api/chat`에서 호출됩니다. 두 그래프는 동일한 `InterviewState` 스키마를 공유합니다. "Page 2 대기"는 LangGraph interrupt가 아닌 HTTP 응답 경계로 표현됩니다(프론트가 `/api/upload` 응답을 받고 Page 2를 띄운 채 사용자가 면접 시작 버튼을 누를 때까지).
 
 ### Tools (`backend/tools.py`)
 
@@ -153,7 +155,7 @@ text = extract_resume_text.invoke({"file_path": "/tmp/resume.pdf"})
 
 | 메서드 | 경로 | 용도 |
 |--------|-----|------|
-| `POST` | `/api/upload` | PDF 업로드 → Resume Parser 실행 |
+| `POST` | `/api/upload` | PDF 업로드 → `parser_graph` 호출 (Resume Parser 노드) → `parsed_data` 반환 |
 | `POST` | `/api/chat` | 사용자 답변 → Evaluator → Interviewer (또는 Report) |
 | `GET` | `/` | 헬스체크 |
 

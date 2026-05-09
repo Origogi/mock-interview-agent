@@ -4,17 +4,13 @@ from pydantic import BaseModel
 from typing import Optional
 import os
 import tempfile
-from openai import OpenAI
 from dotenv import load_dotenv
-import json
-from agent import graph
+from agent import graph, parser_graph
 from langgraph.types import Command
-from tools import extract_resume_text
 
 load_dotenv() # Load variables from .env
 
 app = FastAPI(title="Tech-Interviewer API")
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # CORS middleware to allow React frontend to communicate with FastAPI
 app.add_middleware(
@@ -32,91 +28,34 @@ class HealthCheck(BaseModel):
 def read_root():
     return {"status": "Backend is running!"}
 
-# TODO: Add API endpoints for LangGraph agent (e.g., /api/chat)
-
-def parse_resume_with_llm(text: str) -> dict:
-    prompt = """
-    You are an expert technical recruiter and software engineer.
-    Extract the candidate's professional bio, core technical stack, and key project experiences from the following resume text.
-    
-    IMPORTANT: All text content (bio, project names, descriptions) MUST be written in Korean. If the original resume is in another language, translate it into natural Korean.
-    
-    Output strictly in the following JSON format without any markdown blocks:
-    {
-        "bio": "지원자의 역할, 경력 연차, 핵심 역량을 강조하는 2~3문장 분량의 전문적인 프로필 요약 (반드시 한국어로 작성).",
-        "work_experience": [
-            {
-                "company": "회사명 (한국어)",
-                "role": "직무 및 포지션",
-                "period": "근무 기간 (예: 2020.01 - 2023.05, 모르면 생략)"
-            }
-        ],
-        "tech_stack": ["React", "Python", "FastAPI"],
-        "projects": [
-            {
-                "name": "프로젝트명 (한국어)",
-                "description": "해당 프로젝트의 목적과 본인의 기여도를 요약한 1~2문장 (반드시 한국어로 작성).",
-                "technologies": ["Tech1", "Tech2"]
-            }
-        ],
-        "strengths": ["지원자가 가진 핵심 역량과 그 근거를 구체적으로 서술한 강점 1 (2~3문장 분량으로 상세히)", "구체적인 강점 2 (2~3문장)"],
-        "weaknesses": ["단순한 꼬리 질문이 아닌, 이력서의 공백이나 기술적 한계를 깊게 파고드는 날카로운 약점 분석 및 예상 질문 1 (2~3문장 분량으로 상세히)", "약점 분석 및 예상 질문 2 (2~3문장)"]
-    }
-    """
-    
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": f"Resume Text:\n{text[:10000]}"} # Limit text size just in case
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.2
-        )
-        content = response.choices[0].message.content
-        return json.loads(content)
-    except Exception as e:
-        print(f"LLM Parsing error: {e}")
-        return {"bio": "", "work_experience": [], "tech_stack": [], "projects": [], "strengths": [], "weaknesses": []}
-
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
-    
+
+    tmp_path: Optional[str] = None
     try:
         # 1. Save uploaded file temporarily
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
             tmp.write(await file.read())
             tmp_path = tmp.name
-            
-        # 2. Upload to OpenAI Files API for Assistants/Vector Store
-        with open(tmp_path, "rb") as f:
-            openai_file = client.files.create(
-                file=f,
-                purpose="assistants"
-            )
-            
-        # 2.5 Extract text from PDF (LangChain @tool)
-        extracted_text = extract_resume_text.invoke({"file_path": tmp_path})
-            
-        # 2.6 Parse text with LLM
-        parsed_resume = parse_resume_with_llm(extracted_text)
-            
-        # 3. Clean up temp file
-        os.remove(tmp_path)
-        
+
+        # 2. Run Resume Parser node (단발 그래프 invoke)
+        result = parser_graph.invoke({"resume_file_path": tmp_path})
+        parsed_resume = result.get("resume_summary", {})
+
         return {
             "status": "success",
             "message": "File successfully uploaded and parsed",
-            "file_id": openai_file.id,
             "filename": file.filename,
-            "parsed_data": parsed_resume
+            "parsed_data": parsed_resume,
         }
-        
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"OpenAI File Upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Resume parsing failed: {str(e)}")
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
 # ─────────────────────────────────────────
 # Chat API (LangGraph)
