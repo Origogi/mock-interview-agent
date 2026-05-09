@@ -160,7 +160,7 @@
 |---|------|------|------|
 | N1 | 면접 난이도 조절 (Junior/Mid/Hardcore) | FE / BE / Feature | 큰 작업. 핵심 가치 "긴장감" 보강. |
 | ~~N2~~ ✅ | ~~모션 토큰 (duration/easing) 상수화~~ — `tokens.css`에 `--ease-soft/in-quick/spring`, `--dur-quick/fast/medium/slow/page` 추가. `index.css`의 cubic-bezier 17곳 + duration 30+곳 시멘틱 토큰으로 치환. | FE / DevTODO | 완료 |
-| N3 | MUI Theme 잔존 의존성 정리 | FE / DevTODO | Page 4 리디자인 후 ThemeProvider 제거 가능 시점. |
+| ~~N3~~ ✅ | ~~MUI Theme 잔존 의존성 정리~~ — `src/` import 0건, `package.json` 의존성 0개 확인. `node_modules`의 빈 `@mui/@emotion` 셸 디렉토리 제거. 빌드 통과. | FE / DevTODO | 완료 |
 | N4 | 백엔드 테스트 (pytest + 그래프 mock) | BE / DevTODO | 현재 0개. 회귀 방지. |
 | N5 | 로깅 개선 (`print` → `logging`, thread_id 추적) | BE / DevTODO | 운영 단계 작업. |
 | N6 | 답변 제한 시간 타이머 | FE / Feature | 핵심 가치 "긴장감" 보강. 줄어드는 게이지 + 초과 시 턴 종료. |
