@@ -19,6 +19,15 @@ export default function InterviewPage({
   const lastUserIdxRef = useRef(-1);
   const lastEvalLenRef = useRef(evaluations.length);
   const streamedIdxRef = useRef(new Set());
+  const textareaRef = useRef(null);
+
+  // chatInput state → textarea DOM 단방향 sync.
+  // controlled value prop을 쓰지 않는 이유: React 19 + 한글 IME 조합 중
+  // value 강제 동기화가 자모를 깸. uncontrolled로 두고, 외부 변경(전송 후 reset, Tab 들여쓰기)만 명시적으로 반영.
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (el && el.value !== chatInput) el.value = chatInput;
+  }, [chatInput]);
 
   const [latestEval, setLatestEval] = useState(null);
   const [streaming, setStreaming] = useState({ idx: -1, tokens: [], revealed: 0 });
@@ -127,8 +136,9 @@ export default function InterviewPage({
       const el = e.target;
       const s = el.selectionStart;
       const en = el.selectionEnd;
-      const v = chatInput;
+      const v = el.value;
       const next = v.slice(0, s) + '  ' + v.slice(en);
+      el.value = next;
       setChatInput(next);
       requestAnimationFrame(() => {
         el.selectionStart = el.selectionEnd = s + 2;
@@ -279,16 +289,12 @@ export default function InterviewPage({
         <div className="iv-input-wrap">
           <div className={`iv-input ${busy ? 'is-disabled' : ''}`}>
             <textarea
+              ref={textareaRef}
               className="iv-textarea"
               placeholder={placeholder}
-              value={chatInput}
+              defaultValue=""
               disabled={inputDisabled}
-              onChange={(e) => {
-                // 한글 IME composition 중에는 부모 setState를 건드리면 조합이 깨짐(자모 분리).
-                // composition 종료 시점에 onCompositionEnd가 최종 값을 sync.
-                if (e.nativeEvent.isComposing) return;
-                setChatInput(e.target.value);
-              }}
+              onChange={(e) => setChatInput(e.target.value)}
               onCompositionEnd={(e) => setChatInput(e.target.value)}
               onKeyDown={onKey}
               rows={2}
