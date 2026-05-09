@@ -9,7 +9,7 @@
 - `planning/` — 기획 문서
 - `design/` — 디자인 가이드라인
 
-**핵심 문서 인덱스:** `gemini.md`
+**핵심 문서 인덱스:** `README.md` (모노레포 메인) + 각 폴더의 `README.md`
 
 ## 기술 스택
 | 영역 | 기술 |
@@ -54,7 +54,7 @@ bash stop-dev.sh
 ## 디자인 에셋 구조
 ```
 design/
-├── gemini.md                    # UI/UX 디자이너 페르소나 및 검수 원칙
+├── README.md                    # 디자인 원칙, 검수 체크리스트, 에셋 인덱스
 └── assets/
     ├── wireframe/               # 화면별 와이어프레임
     │   ├── wireframe_page1.png

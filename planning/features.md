@@ -45,6 +45,82 @@
 
 ---
 
+## 1.5 Phase 5 — UX/UI 고도화 (디자인 검토 반영)
+
+### F-21. Page 3 — 토큰 단위 스트리밍 응답 [부분 완료]
+**왜**: 응답을 한 번에 표시하면 "AI가 생각하는 긴장감"(핵심 가치 #2)이 약해짐. Claude처럼 토큰이 흘러나오는 시각적 압박이 면접관 페르소나를 강화.
+
+**스펙**
+- [ ] 백엔드: OpenAI `stream=True` (또는 SSE 엔드포인트) 도입, 토큰을 chunk로 푸시
+- [x] 프론트: 각 토큰을 `<span>`으로 받아 `opacity 0 → 1 + blur(2px) → 0` 페이드 인 (0.32s ease-out)
+- [x] 토큰 도착 페이스: 일반 55ms, 마침표/물음표 후 220ms 호흡 (현재는 클라이언트사이드 모사)
+- [x] 스트리밍 중 메시지 끝에 블록 캐럿 (1초 step blink)
+
+### F-22. Page 3 — 사용자 답변 viewport pin scroll [완료]
+**왜**: 긴 답변을 보내고 나면 본인 답변이 시야에서 사라지는데, 면접관 응답을 보는 동안 본인 답변과 비교하기 어려움.
+
+**스펙**
+- [x] 사용자가 답변 전송 → 해당 버블의 `getBoundingClientRect().top` 기준으로 스크롤 viewport 상단에 pin (24px 여유)
+- [x] AI 응답은 pin 아래로 자연스럽게 흘러나옴 (스크롤 재호출 없음)
+- [x] 스레드 하단에 `min-height: 70vh` 스페이서 — 짧은 응답이라도 user bubble이 실제로 상단까지 갈 수 있도록
+
+### F-23. Page 3 — 평가 완료 토스트 [완료]
+**왜**: "직관적인 피드백"(핵심 가치 #3)을 면접 중에도 즉시 제공.
+
+**스펙**
+- [x] 답변 분석 완료 시 우측 상단에 score 카드 슬라이드 인
+- [x] 점수 ≥ 7: accent 컬러 / < 7: 경고 red
+- [x] 2.6초 후 자동 사라짐
+- [x] 좌측 레일 평가 카드 highlight 페이드아웃으로 갱신 (`is-fresh` 클래스)
+
+### F-24. Page 4 — 차트 진입 애니메이션 [미진행]
+**왜**: 결과 도달의 카타르시스 강화. 정적 차트 < 형성되는 차트.
+
+**스펙** (Page 4 리디자인과 함께 진행 예정)
+- [ ] 레이더 폴리곤이 중심에서 0 → 100% 부풀어 오름 (1.1s ease-out cubic)
+- [ ] 꼭지점 6개 원이 70ms stagger로 스프링 이징 팝 (cubic-bezier(0.34, 1.56, 0.64, 1))
+- [ ] 범례 바: 0% → 실제값 width fill (1.1s, 80ms 간격 stagger)
+- [x] 종합 점수 카운트업 (Page 4 기존 구현)
+
+### F-25. 페이지 간 트랜지션 [완료]
+**왜**: SPA 네비게이션의 단절감 제거. Apple Keynote 스타일 연결감.
+
+**스펙**
+- [x] 페이지 전환 시 out 애니메이션(0.28s) → mount → in 애니메이션(0.5s)
+- [x] out: scale(0.985), translateY(-4px), blur(4px), opacity 0
+- [x] in: scale(1.02 → 1), translateY(8 → 0), blur(6 → 0), opacity 0 → 1
+- [x] `prefers-reduced-motion: reduce` 시 비활성화
+
+### F-26. 아코디언 부드러운 펼침 [부분 완료]
+**왜**: 즉시 토글로는 정보 위계가 약함.
+
+**스펙**
+- [x] `grid-template-rows: 0fr → 1fr` 트랜지션 (0.32~0.4s cubic-bezier(0.22, 0.61, 0.36, 1))
+- [x] 내부 컨텐츠는 0.06s 지연 후 fade + translateY(-4 → 0)
+- [x] 셰브론 회전 (Page 3 평가 카드)
+- [ ] Page 4 문항별 상세에 동일 패턴 적용 (현재 MUI Accordion 사용 중)
+
+---
+
+## 1.6 Phase 5 — 수정 기능
+
+### F-09 (수정). Page 3 — 면접관 메시지 스타일 [완료]
+**Before**: AI/사용자 모두 버블 형태
+**After**: AI 메시지는 버블/배경 제거, 캔버스 위에 텍스트 직접 (18px / 1.65 line-height). 사용자 메시지만 accent 버블 유지. → `bubble-ai .bubble-body { background: transparent; border: none; ... }` 로 구현 완료.
+
+### F-12 (수정). Page 2 — 로딩 → 결과 전환 [완료]
+**Before**: 로딩 끝나면 즉시 결과 표시
+**After**:
+- 로더가 페이드아웃 (`is-leaving` 클래스로 400ms 전환)
+- 결과는 fade in (`summary-loaded-fade`)
+- `prevLoading` ref로 로딩 → 로드 완료 트리거 정확히 감지
+
+### F-15 (수정). Page 2 — Stat Row 신설 [완료]
+**Before**: 텍스트 위주 요약
+**After**: 4개 큰 숫자 callout (`경력 / 기술 스택 / 주요 프로젝트 / 공격 포인트`) — 공격 포인트만 accent 강조. 구현 완료.
+
+---
+
 ## 2. 🗂 백로그 (Backlog - 추후 반영 예정)
 
 1. **면접 난이도 조절 기능 (Difficulty Level)**

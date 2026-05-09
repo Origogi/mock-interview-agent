@@ -78,23 +78,22 @@ npm run dev
 ```
 
 ## 📂 기획 및 설계 문서 (Index)
-이 프로젝트는 기획, 프론트엔드, 백엔드가 완벽하게 분리된 모노레포 구조로 관리됩니다. 상세 아키텍처 및 기획 문서는 아래를 참고해 주세요.
-
-* **[전체 문서 목차(Index) 메인 페이지 👉](./gemini.md)**
+이 프로젝트는 기획, 프론트엔드, 백엔드가 완벽하게 분리된 모노레포 구조로 관리됩니다. 상세 아키텍처 및 기획 문서는 각 폴더의 README를 참고해 주세요.
 
 ### 1. 기획 및 비전 (Planning)
-* [PM 페르소나 및 가이드라인](./planning/gemini.md)
+* **[기획 폴더 README](./planning/README.md)** — 핵심 가치 및 문서 인덱스
 * [프로젝트 진행 상황 (Todo List)](./planning/todo.md)
 * [프로젝트 기획서 (Proposal)](./planning/proposal.md)
 * [UI/UX 스토리보드 (Storyboard)](./planning/storyboard.md)
 * [기능 명세 및 백로그 (Features)](./planning/features.md)
 
 ### 2. 기술 스펙 (Tech Specs)
-* [프론트엔드 아키텍처 설계서 (React+Vite)](./frontend/gemini.md)
-* [백엔드 아키텍처 설계서 (FastAPI+LangGraph)](./backend/gemini.md)
+* [프론트엔드 아키텍처 (React + Vite)](./frontend/README.md)
+* [백엔드 아키텍처 (FastAPI + LangGraph)](./backend/README.md)
 
 ### 3. 디자인 (Design)
-* [UI/UX 디자이너 페르소나 및 검수 원칙](./design/gemini.md)
+* **[디자인 폴더 README](./design/README.md)** — 디자인 원칙, 검수 체크리스트, 에셋 인덱스
+* v2 프로토타입: `design/assets/redesign/v1-redesign.html`
 * 와이어프레임 (`design/assets/wireframe/`)
   * [Page 1 — 홈](./design/assets/wireframe/wireframe_page1.png)
   * [Page 2 — 이력서 요약](./design/assets/wireframe/wireframe_page2.png)
