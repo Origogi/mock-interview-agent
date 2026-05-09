@@ -6,10 +6,10 @@ import os
 import tempfile
 from openai import OpenAI
 from dotenv import load_dotenv
-import PyPDF2
 import json
 from agent import graph
 from langgraph.types import Command
+from tools import extract_resume_text
 
 load_dotenv() # Load variables from .env
 
@@ -33,16 +33,6 @@ def read_root():
     return {"status": "Backend is running!"}
 
 # TODO: Add API endpoints for LangGraph agent (e.g., /api/chat)
-
-def extract_text_from_pdf(file_path: str) -> str:
-    text = ""
-    with open(file_path, "rb") as f:
-        reader = PyPDF2.PdfReader(f)
-        for page in reader.pages:
-            extracted = page.extract_text()
-            if extracted:
-                text += extracted + "\n"
-    return text
 
 def parse_resume_with_llm(text: str) -> dict:
     prompt = """
@@ -108,8 +98,8 @@ async def upload_file(file: UploadFile = File(...)):
                 purpose="assistants"
             )
             
-        # 2.5 Extract text from PDF
-        extracted_text = extract_text_from_pdf(tmp_path)
+        # 2.5 Extract text from PDF (LangChain @tool)
+        extracted_text = extract_resume_text.invoke({"file_path": tmp_path})
             
         # 2.6 Parse text with LLM
         parsed_resume = parse_resume_with_llm(extracted_text)

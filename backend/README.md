@@ -63,10 +63,32 @@ class InterviewState(TypedDict):
 
 | 노드 | 역할 | Interrupt |
 |-----|------|-----------|
-| **Node 1: Resume Parser** | OpenAI Files API의 PDF 내용을 기반으로 기술 스택, 프로젝트, 핵심 역량을 JSON으로 추출하여 `resume_summary` 저장 | Page 2 전 대기 |
+| **Node 1: Resume Parser** | PDF에서 raw text를 추출(아래 `extract_resume_text` tool 위임)한 뒤 LLM으로 기술 스택·프로젝트·핵심 역량을 JSON으로 구조화하여 `resume_summary`에 저장 | Page 2 전 대기 |
 | **Node 2: Interviewer** | `resume_summary`와 이전 `messages`를 보고 다음 질문(또는 꼬리 질문) 생성, `question_count` +1 | Page 3 답변 대기 |
 | **Node 3: Evaluator** | 사용자 답변을 평가하여 `evaluations`에 점수 + 피드백 누적 | - |
 | **Node 4: Report Generator** | 누적된 `evaluations`를 바탕으로 최종 레이더 차트 데이터 + 종합 피드백 생성 | - |
+
+### Tools (`backend/tools.py`)
+
+LangChain `@tool` 데코레이터로 등록된 재사용 가능한 함수들. 노드 안에서 직접 호출하거나 향후 LLM이 자율적으로 invoke할 수 있도록 schema가 노출됩니다.
+
+| 이름 | Input | Output | 용도 |
+|-----|------|--------|------|
+| `extract_resume_text` | `file_path: str` (로컬 PDF 경로) | `str` (모든 페이지의 raw text, 줄바꿈 구분) | Resume Parser 노드의 PDF 추출 단계. PyPDF2로 페이지 별 텍스트 추출 |
+
+```python
+# backend/tools.py
+@tool
+def extract_resume_text(file_path: str) -> str:
+    """Read a resume PDF from the local filesystem and return its raw extracted text."""
+    ...
+```
+
+호출 예시:
+```python
+from tools import extract_resume_text
+text = extract_resume_text.invoke({"file_path": "/tmp/resume.pdf"})
+```
 
 ## 5. 프롬프트 엔지니어링
 
