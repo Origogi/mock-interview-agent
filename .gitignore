@@ -19,3 +19,6 @@ build/
 
 # IDE
 .DS_Store
+
+# Skill eval workspaces (test artifacts, regenerated each run)
+.claude/skills/*-workspace/
