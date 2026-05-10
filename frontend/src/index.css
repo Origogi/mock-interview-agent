@@ -707,7 +707,7 @@
   display: flex; flex-direction: column; gap: 28px;
   max-width: 880px; width: 100%; margin: 0 auto;
 }
-.iv-thread-spacer { min-height: 70vh; }
+.iv-thread-spacer { flex-shrink: 0; }
 .bubble { max-width: 88%; }
 .bubble-ai { align-self: flex-start; }
 .bubble-user { align-self: flex-end; }

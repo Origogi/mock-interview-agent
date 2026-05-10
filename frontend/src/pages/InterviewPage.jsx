@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useStickToBottom } from 'use-stick-to-bottom';
 import SampleAnswerButton from '../debug/SampleAnswerButton.jsx';
 
@@ -31,6 +31,7 @@ export default function InterviewPage({
   const lastEvalLenRef = useRef(evaluations.length);
   const streamedIdxRef = useRef(new Set());
   const textareaRef = useRef(null);
+  const spacerRef = useRef(null);
   const streamInitializedRef = useRef(false);
 
   // chatInput state → textarea DOM 단방향 sync.
@@ -57,6 +58,55 @@ export default function InterviewPage({
     }
     return -1;
   }, [messages]);
+
+  const updateSpacer = useCallback(() => {
+    if (!threadRef.current || !spacerRef.current) return;
+
+    const containerH = threadRef.current.clientHeight;
+
+    let lastUserIdx = -1;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        lastUserIdx = i;
+        break;
+      }
+    }
+
+    if (lastUserIdx === -1) {
+      spacerRef.current.style.height = '0px';
+      return;
+    }
+
+    const userEl = threadRef.current.querySelector(`[data-msg-idx="${lastUserIdx}"]`);
+    const userH = userEl?.offsetHeight ?? 0;
+
+    let lastAiH = 0;
+    for (let i = messages.length - 1; i > lastUserIdx; i--) {
+      if (messages[i].role === 'ai') {
+        const aiEl = threadRef.current.querySelector(`[data-msg-idx="${i}"]`);
+        lastAiH = aiEl?.offsetHeight ?? 0;
+        break;
+      }
+    }
+
+    const GAP = 28;
+    const TOP_PADDING = 24;
+    const target = Math.max(0, containerH - userH - lastAiH - GAP - TOP_PADDING);
+    spacerRef.current.style.height = `${target}px`;
+  }, [messages]);
+
+  // Update spacer when messages or streaming content changes.
+  useLayoutEffect(() => {
+    updateSpacer();
+  }, [updateSpacer, streaming.partialContent]);
+
+  // Observe viewport resize.
+  useEffect(() => {
+    if (!threadRef.current) return;
+    const ro = new ResizeObserver(() => updateSpacer());
+    ro.observe(threadRef.current);
+    return () => ro.disconnect();
+  }, [updateSpacer]);
 
   // Detect new user message + pin to top in a single layout pass (avoids paint flash).
   useLayoutEffect(() => {
@@ -400,8 +450,8 @@ export default function InterviewPage({
                 </div>
               </div>
             )}
+            <div ref={spacerRef} className="iv-thread-spacer" aria-hidden="true" />
           </div>
-          <div className="iv-thread-spacer" aria-hidden="true" />
         </div>
 
         <div className="iv-input-wrap">
