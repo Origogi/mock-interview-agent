@@ -5,11 +5,9 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const ACCENT = '#6e74ff';
 const SECONDARY = '#06b6d4';
 
-// Create mock File object for sample resume
 const createMockFile = () => {
-  const blob = new Blob([], { type: 'application/pdf' });
-  const mockFile = new File(blob, '샘플 이력서.pdf', { type: 'application/pdf' });
-  // Simulate file size (124KB)
+  const blob = new Blob(['Sample Resume'], { type: 'application/pdf' });
+  const mockFile = new File([blob], '샘플 이력서.pdf', { type: 'application/pdf' });
   Object.defineProperty(mockFile, 'size', { value: 124000, writable: false });
   return mockFile;
 };
