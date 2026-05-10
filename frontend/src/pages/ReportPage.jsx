@@ -205,7 +205,7 @@ function RadarChart({ scores, accent }) {
   };
 
   return (
-    <svg className="radar-svg" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet" style={{ '--accent': accent }}>
+    <svg className="radar-svg" viewBox="-40 -20 280 240" preserveAspectRatio="xMidYMid meet" style={{ '--accent': accent }}>
       {ringTiers.map((t, i) => {
         const pts = axes.map((ax) => point(ax.angle, r * t).join(',')).join(' ');
         return (
