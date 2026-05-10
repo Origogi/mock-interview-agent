@@ -58,14 +58,24 @@ def generate_sample_answer(thread_id: str, quality_tier: str) -> Dict:
     resume_summary = current_values.get("resume_summary", {})
     messages = current_values.get("messages", [])
 
-    # Get current pending question from interrupts
+    # Get current pending question from interrupts (sync flow) or messages (stream flow)
     current_question = None
+
+    # Try: Get from interrupts (sync /api/chat flow)
     interrupts = []
     for task in state.tasks:
         interrupts.extend(task.interrupts)
 
     if interrupts:
         current_question = interrupts[0].value
+
+    # Fallback: Get from last message (stream /api/chat/stream flow)
+    if not current_question and messages:
+        last_message = messages[-1]
+        if hasattr(last_message, 'content'):
+            current_question = last_message.content
+        elif isinstance(last_message, dict):
+            current_question = last_message.get('content')
 
     if not current_question:
         raise ValueError("No pending question found. Interview may not have started or is finished.")

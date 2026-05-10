@@ -14,6 +14,7 @@ function App() {
   const [serverStatus, setServerStatus] = useState('checking');
   const [errorMsg, setErrorMsg] = useState('');
   const [summaryData, setSummaryData] = useState(null);
+  const [isMockSession, setIsMockSession] = useState(false);
 
   // Page 3 States
   const [messages, setMessages] = useState([]);
@@ -42,6 +43,15 @@ function App() {
 
   const handleUpload = async (file) => {
     if (!file) return;
+
+    // Layer 1: Early return for mock session
+    if (isMockSession) {
+      setSummaryData(FIXTURE_SAMPLE_RESUME);
+      setErrorMsg('');
+      setCurrentPage('summary');
+      return;
+    }
+
     setIsUploading(true);
     setCurrentPage('summary');
 
@@ -106,26 +116,108 @@ function App() {
     setMessages((prev) => [...prev, { role: 'user', content: answer }]);
     setChatInput('');
     setIsAiTyping(true);
+
     try {
-      const res = await fetch('http://localhost:8000/api/chat', {
+      // 스트림 엔드포인트 시도
+      const res = await fetch('http://localhost:8000/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ thread_id: threadId, user_answer: answer }),
       });
-      const data = await res.json();
-      setEvaluations(data.evaluations || []);
-      setCurrentQuestionCount(data.question_count);
-      if (data.is_finished) {
-        setFinalReport(data.final_report);
-        setTimeout(() => setCurrentPage('report'), 2000);
-        setMessages((prev) => [...prev, { role: 'ai', content: '면접이 모두 완료되었습니다! 결과를 집계하는 중...' }]);
-      } else {
-        setMessages((prev) => [...prev, { role: 'ai', content: data.question }]);
+
+      if (!res.ok || !res.body) {
+        throw new Error('Stream not available');
       }
-    } catch {
-      setErrorMsg('서버 연결 오류: 답변 전송에 실패했습니다.');
-    } finally {
-      setIsAiTyping(false);
+
+      // NDJSON 스트림 처리
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let partialContent = '';
+      let streamDoneData = null;
+
+      setIsAiTyping(false); // 스트림 시작 시 타이핑 상태 종료
+      setMessages((prev) => [...prev, { role: 'ai', content: '' }]); // AI 메시지 준비
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        let nlIdx;
+        while ((nlIdx = buffer.indexOf('\n')) !== -1) {
+          const line = buffer.slice(0, nlIdx).trim();
+          buffer = buffer.slice(nlIdx + 1);
+          if (!line) continue;
+
+          try {
+            const event = JSON.parse(line);
+
+            if (event.type === 'token') {
+              partialContent += event.value;
+              setMessages((prev) => {
+                const newMsgs = [...prev];
+                newMsgs[newMsgs.length - 1] = {
+                  role: 'ai',
+                  content: partialContent,
+                };
+                return newMsgs;
+              });
+            } else if (event.type === 'done') {
+              streamDoneData = event.data;
+            } else if (event.type === 'error') {
+              console.warn('Stream error:', event.message);
+            }
+          } catch (parseErr) {
+            console.warn('JSON parse error in stream:', parseErr);
+          }
+        }
+      }
+
+      // 최종 메시지 정확성을 위해 streamDoneData로 덮어씀
+      if (streamDoneData) {
+        setEvaluations(streamDoneData.evaluations || []);
+        setCurrentQuestionCount(streamDoneData.question_count);
+        if (streamDoneData.is_finished) {
+          setFinalReport(streamDoneData.final_report);
+          setTimeout(() => setCurrentPage('report'), 2000);
+          setMessages((prev) => [...prev, { role: 'ai', content: '면접이 모두 완료되었습니다! 결과를 집계하는 중...' }]);
+        }
+        // Mark stream completion for InterviewPage to detect
+        setMessages((prev) => {
+          if (prev.length > 0) {
+            const updated = [...prev];
+            updated[updated.length - 1] = { ...updated[updated.length - 1], streamDone: true };
+            return updated;
+          }
+          return prev;
+        });
+      }
+    } catch (streamErr) {
+      // 폴백: 동기 `/api/chat` 호출
+      console.warn('Stream failed, falling back to sync /api/chat:', streamErr);
+      setIsAiTyping(true);
+      try {
+        const res = await fetch('http://localhost:8000/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ thread_id: threadId, user_answer: answer }),
+        });
+        const data = await res.json();
+        setEvaluations(data.evaluations || []);
+        setCurrentQuestionCount(data.question_count);
+        if (data.is_finished) {
+          setFinalReport(data.final_report);
+          setTimeout(() => setCurrentPage('report'), 2000);
+          setMessages((prev) => [...prev, { role: 'ai', content: '면접이 모두 완료되었습니다! 결과를 집계하는 중...' }]);
+        } else {
+          setMessages((prev) => [...prev, { role: 'ai', content: data.question }]);
+        }
+      } catch {
+        setErrorMsg('서버 연결 오류: 답변 전송에 실패했습니다.');
+      } finally {
+        setIsAiTyping(false);
+      }
     }
   };
 
@@ -151,27 +243,31 @@ function App() {
     }
   };
 
-  const restartFromReport = () => {
+
+  const handleSelectSampleResume = () => {
+    setIsMockSession(true);
+  };
+
+  const handleClearMock = () => {
+    setIsMockSession(false);
+  };
+
+  const handleRestartOrClearMock = () => {
     setCurrentPage('home');
     setMessages([]);
     setEvaluations([]);
     setFinalReport(null);
-  };
-
-  const handleDebugSampleResume = () => {
-    setSummaryData(FIXTURE_SAMPLE_RESUME);
-    setErrorMsg('');
-    setCurrentPage('summary');
+    setIsMockSession(false);
   };
 
   return (
     <div className="app">
-      <TopBar currentPage={currentPage} serverStatus={serverStatus} onSelectSampleResume={handleDebugSampleResume} />
+      <TopBar currentPage={currentPage} serverStatus={serverStatus} />
 
       <div className="viewport">
         <PageTransition pageKey={currentPage}>
           {currentPage === 'home' && (
-            <HomePage onSubmit={handleUpload} onError={setErrorMsg} />
+            <HomePage onSubmit={handleUpload} onError={setErrorMsg} onSelectSampleResume={handleSelectSampleResume} onClearMock={handleClearMock} isUploading={isUploading} />
           )}
           {currentPage === 'summary' && (
             <SummaryPage
@@ -199,7 +295,7 @@ function App() {
             <ReportPage
               report={finalReport}
               evaluations={evaluations}
-              onRestart={restartFromReport}
+              onRestart={handleRestartOrClearMock}
             />
           )}
         </PageTransition>

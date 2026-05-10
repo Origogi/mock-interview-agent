@@ -33,7 +33,14 @@ export default function InterviewPage({
   }, [chatInput]);
 
   const [latestEval, setLatestEval] = useState(null);
-  const [streaming, setStreaming] = useState({ idx: -1, tokens: [], revealed: 0 });
+  const [streaming, setStreaming] = useState({
+    idx: -1,
+    partialContent: '',  // stream 모드: 누적 텍스트 (서버에서 실시간 도착)
+    tokens: [],          // 폴백 모드: reveal 큐 (동기 응답을 분할)
+    revealed: 0,         // 폴백 모드: reveal 진행도
+    mode: 'idle',        // 'stream' | 'fallback' | 'idle'
+    isDone: false,
+  });
 
   const lastAiIdx = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -64,20 +71,50 @@ export default function InterviewPage({
     el.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
   }, [messages]);
 
-  // Detect new AI message → start client-side token-fade animation.
+  // Detect new AI message → determine stream vs fallback mode.
   useEffect(() => {
     if (lastAiIdx === -1) return;
     if (streamedIdxRef.current.has(lastAiIdx)) return;
     if (streaming.idx === lastAiIdx) return;
-    const content = messages[lastAiIdx]?.content || '';
-    if (!content) return;
-    const tokens = content.match(/\S+\s*/g) || [content];
-    setStreaming({ idx: lastAiIdx, tokens, revealed: 0 });
-  }, [lastAiIdx, messages, streaming.idx]);
 
-  // Drive token reveal.
+    const content = messages[lastAiIdx]?.content || '';
+
+    // 스트림 모드 감지: isAiTyping === false + 빈 메시지 = 스트림 시작
+    if (!isAiTyping && content === '' && streaming.mode !== 'stream') {
+      setStreaming({
+        idx: lastAiIdx,
+        partialContent: '',
+        tokens: [],
+        revealed: 0,
+        mode: 'stream',
+        isDone: false,
+      });
+      return;
+    }
+
+    // 폴백 모드: 기존 동기 응답 (isAiTyping이 true → false 후 content가 있음)
+    if (!content) return;
+    if (streaming.mode === 'stream') return; // 이미 스트림 모드이면 스킵
+
+    // streamDone 플래그가 있는 메시지는 폴백 모드로 진입 금지 (스트림 완료 후 idle 리셋 중)
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.streamDone) return;
+
+    const tokens = content.match(/\S+\s*/g) || [content];
+    setStreaming({
+      idx: lastAiIdx,
+      partialContent: '',
+      tokens,
+      revealed: 0,
+      mode: 'fallback',
+      isDone: false,
+    });
+  }, [lastAiIdx, messages, streaming.idx, streaming.mode, isAiTyping]);
+
+  // Drive token reveal (폴백 모드만).
   useEffect(() => {
     if (streaming.idx === -1) return;
+    if (streaming.mode !== 'fallback') return; // 폴백 모드만 작동
     if (streaming.revealed >= streaming.tokens.length) {
       streamedIdxRef.current.add(streaming.idx);
       return;
@@ -95,6 +132,27 @@ export default function InterviewPage({
     }, delay);
     return () => clearTimeout(t);
   }, [streaming]);
+
+  // Detect stream completion via message flag (streamDone).
+  // App.jsx가 stream 완료 후 마지막 메시지에 streamDone: true 플래그 박으면,
+  // 이 effect가 감지하여 streaming state를 idle로 리셋.
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.streamDone && streaming.idx !== -1) {
+      // streamedIdxRef 표기하여 모드 감지 effect가 폴백으로 진입하는 것을 차단
+      streamedIdxRef.current.add(streaming.idx);
+      setStreaming((s) => ({
+        ...s,
+        idx: -1,
+        mode: 'idle',
+        partialContent: '',
+        tokens: [],
+        revealed: 0,
+        isDone: false,
+      }));
+    }
+  }, [messages]);
 
   // Detect new evaluation → toast + reaction.
   useEffect(() => {
@@ -114,7 +172,7 @@ export default function InterviewPage({
   const lastScore = evaluations.length ? evaluations[evaluations.length - 1].score : null;
   const reactionEmoji = lastScore == null ? '🤔' : lastScore >= 8 ? '😌' : lastScore >= 6 ? '🤔' : '😐';
 
-  const isStreaming = streaming.idx !== -1 && streaming.revealed < streaming.tokens.length;
+  const isStreaming = streaming.idx !== -1 && (streaming.mode === 'stream' || (streaming.mode === 'fallback' && streaming.revealed < streaming.tokens.length));
   const busy = isAiTyping || isStreaming;
   const finished = currentQuestionCount > maxQuestions;
   const inputDisabled = busy || finished || isFetchingSample;
@@ -125,6 +183,8 @@ export default function InterviewPage({
     ? '샘플 답변 생성 중…'
     : isAiTyping
     ? '면접관이 분석 중이에요…'
+    : streaming.mode === 'stream'
+    ? '면접관이 답변을 작성하는 중이에요…'
     : isStreaming
     ? '면접관이 말하는 중이에요…'
     : '답변을 입력하세요. Enter 전송 · Shift+Enter 줄바꿈 · Tab 들여쓰기';
@@ -220,9 +280,13 @@ export default function InterviewPage({
             <div>
               <div className="iv-int-name">시니어 엔지니어 면접관</div>
               <div className="iv-int-role">
-                {isStreaming ? (
+                {streaming.mode === 'stream' ? (
                   <>
                     <span className="rec-dot" style={{ background: accent }} /> 답변 생성 중…
+                  </>
+                ) : isStreaming ? (
+                  <>
+                    <span className="rec-dot" style={{ background: accent }} /> 답변 표시 중…
                   </>
                 ) : isAiTyping ? (
                   <>
@@ -263,10 +327,22 @@ export default function InterviewPage({
           {messages.map((m, idx) => {
             const isLastAi = idx === lastAiIdx && m.role === 'ai';
             const isStreamingThis = isLastAi && streaming.idx === idx;
-            const visibleTokens = isStreamingThis
-              ? streaming.tokens.slice(0, streaming.revealed)
-              : null;
-            const showCaret = isStreamingThis && streaming.revealed < streaming.tokens.length;
+
+            let visibleTokens = null;
+            let showCaret = false;
+
+            if (isStreamingThis) {
+              if (streaming.mode === 'stream') {
+                // 스트림 모드: partialContent를 단일 "토큰"으로 처리
+                visibleTokens = streaming.partialContent ? [streaming.partialContent] : null;
+                showCaret = !streaming.isDone;
+              } else if (streaming.mode === 'fallback') {
+                // 폴백 모드: 기존 token-fade 애니메이션
+                visibleTokens = streaming.tokens.slice(0, streaming.revealed);
+                showCaret = streaming.revealed < streaming.tokens.length;
+              }
+            }
+
             return (
               <Bubble
                 key={idx}
