@@ -1,11 +1,37 @@
 import { useState } from 'react';
+import SampleResumeButton from '../debug/SampleResumeButton.jsx';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ACCENT = '#6e74ff';
+const SECONDARY = '#06b6d4';
 
-export default function HomePage({ onSubmit, onError }) {
+// Create mock File object for sample resume
+const createMockFile = () => {
+  const blob = new Blob([], { type: 'application/pdf' });
+  const mockFile = new File(blob, '샘플 이력서.pdf', { type: 'application/pdf' });
+  // Simulate file size (124KB)
+  Object.defineProperty(mockFile, 'size', { value: 124000, writable: false });
+  return mockFile;
+};
+
+export default function HomePage({ onSubmit, onError, onSelectSampleResume, onClearMock, isUploading = false }) {
   const [drag, setDrag] = useState(false);
   const [file, setFile] = useState(null);
+
+  // 5상태 가시성 규칙
+  // (a) 빈 상태 → visible
+  // (b) 드래그 오버 → visible
+  // (c) 파일 선택 상태 → hidden
+  // (d) 분석 중 → hidden
+  // (e) 에러 후 복귀 → visible (file이 null이므로 (a)와 동일)
+  const shouldShowSampleButton = !file && !isUploading;
+
+  const handleSelectSample = (e) => {
+    e.stopPropagation();
+    const mockFile = createMockFile();
+    setFile(mockFile);
+    onSelectSampleResume?.();
+  };
 
   const pickFile = (f) => {
     if (!f) return;
@@ -61,15 +87,18 @@ export default function HomePage({ onSubmit, onError }) {
                 </div>
                 <div className="drop-title">이력서 PDF를 여기에 놓아 주세요</div>
                 <div className="drop-sub">또는 직접 선택 · 최대 5MB</div>
-                <label className="btn btn-primary" style={{ background: ACCENT, marginTop: 24 }}>
-                  파일 선택
-                  <input
-                    type="file"
-                    accept="application/pdf"
-                    hidden
-                    onChange={(e) => pickFile(e.target.files[0])}
-                  />
-                </label>
+                <div className="button-group">
+                  <label className="btn btn-primary" style={{ background: ACCENT }}>
+                    파일 선택
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      hidden
+                      onChange={(e) => pickFile(e.target.files[0])}
+                    />
+                  </label>
+                  {onSelectSampleResume && <SampleResumeButton onSelectSampleResume={handleSelectSample} shouldVisible={shouldShowSampleButton} />}
+                </div>
               </>
             ) : (
               <>
@@ -92,7 +121,10 @@ export default function HomePage({ onSubmit, onError }) {
                 >
                   분석 시작 <span className="arr">→</span>
                 </button>
-                <button className="btn-link" onClick={() => setFile(null)}>다른 파일 선택</button>
+                <button className="btn-link" onClick={() => {
+                  setFile(null);
+                  onClearMock?.();
+                }}>다른 파일 선택</button>
               </>
             )}
           </div>

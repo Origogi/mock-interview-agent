@@ -258,6 +258,20 @@
 .drop-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
 .drop-sub { font-size: 13px; color: var(--fg-dim); }
 
+/* Button group for file upload + sample resume side-by-side */
+.button-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+@media (max-width: 480px) {
+  .button-group {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
 .file-card {
   display: flex;
   align-items: center;
