@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Sparkles, ChevronDown } from 'lucide-react';
+import HeroScore from '../components/HeroScore';
 
 const ACCENT = '#6e74ff';
 
@@ -14,6 +15,11 @@ export default function ReportPage({ report, evaluations = [], onRestart, accent
   const scores = report?.scores || {};
   const feedback = report?.feedback || {};
 
+  // 종합 점수 계산: 4개 KPI 산술평균
+  const avgScore = Math.round(
+    Object.values(scores).reduce((sum, val) => sum + (val || 0), 0) / 4
+  );
+
   return (
     <div className="screen report report-host" data-screen-label="04 Report">
       <div className="report-wrap">
@@ -25,6 +31,8 @@ export default function ReportPage({ report, evaluations = [], onRestart, accent
           <h1 className="report-title">고생하셨습니다</h1>
           <p className="report-sub">지원자님의 역량 분석 결과입니다.</p>
         </header>
+
+        <HeroScore finalScore={avgScore} accent={accent} />
 
         <section className="kpi-row">
           {KPI_DEFS.map((kpi, i) => (
