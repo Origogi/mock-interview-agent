@@ -14,7 +14,6 @@ function App() {
   const [serverStatus, setServerStatus] = useState('checking');
   const [errorMsg, setErrorMsg] = useState('');
   const [summaryData, setSummaryData] = useState(null);
-  const [isMockSession, setIsMockSession] = useState(false);
 
   // Page 3 States
   const [messages, setMessages] = useState([]);
@@ -43,14 +42,6 @@ function App() {
 
   const handleUpload = async (file) => {
     if (!file) return;
-
-    // Layer 1: Early return for mock session
-    if (isMockSession) {
-      setSummaryData(FIXTURE_SAMPLE_RESUME);
-      setErrorMsg('');
-      setCurrentPage('summary');
-      return;
-    }
 
     setIsUploading(true);
     setCurrentPage('summary');
@@ -244,12 +235,9 @@ function App() {
   };
 
 
-  const handleSelectSampleResume = () => {
-    setIsMockSession(true);
-  };
-
-  const handleClearMock = () => {
-    setIsMockSession(false);
+  const handleSelectSampleResumeWithFixture = () => {
+    setCurrentPage('summary');
+    setSummaryData(FIXTURE_SAMPLE_RESUME);
   };
 
   const handleRestartOrClearMock = () => {
@@ -257,7 +245,6 @@ function App() {
     setMessages([]);
     setEvaluations([]);
     setFinalReport(null);
-    setIsMockSession(false);
   };
 
   return (
@@ -267,7 +254,7 @@ function App() {
       <div className="viewport">
         <PageTransition pageKey={currentPage}>
           {currentPage === 'home' && (
-            <HomePage onSubmit={handleUpload} onError={setErrorMsg} onSelectSampleResume={handleSelectSampleResume} onClearMock={handleClearMock} isUploading={isUploading} />
+            <HomePage onSubmit={handleUpload} onError={setErrorMsg} onSelectSampleResume={handleSelectSampleResumeWithFixture} isUploading={isUploading} />
           )}
           {currentPage === 'summary' && (
             <SummaryPage
