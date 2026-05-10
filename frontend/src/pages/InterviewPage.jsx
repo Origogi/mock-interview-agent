@@ -133,12 +133,40 @@ export default function InterviewPage({
   // Force re-enable stick-to-bottom when stream starts (first chunk arrival).
   // External scrollTo (snap-to-top) disables the library's auto-scroll.
   // We must explicitly call scrollToBottom() to re-activate the stick-to-bottom behavior.
+  // However, if the last user message is long (doesn't fit in container height),
+  // the user is near-top and forcing scrollToBottom() creates jarring UX.
+  // In that case, allow user to manually scroll down, and the library will auto-detect isNearBottom.
   useEffect(() => {
     if (streaming.mode === 'stream' && streaming.partialContent && !streamInitializedRef.current) {
       streamInitializedRef.current = true;
-      scrollToBottom();
+
+      // Check if last user message fits in container
+      let lastUserIdx = -1;
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role === 'user') {
+          lastUserIdx = i;
+          break;
+        }
+      }
+
+      const shouldForceBotScroll = lastUserIdx !== -1 && threadRef.current;
+      if (shouldForceBotScroll) {
+        const userEl = threadRef.current.querySelector(`[data-msg-idx="${lastUserIdx}"]`);
+        const userH = userEl?.offsetHeight ?? 0;
+        const containerH = threadRef.current.clientHeight ?? 0;
+        const TOP_PADDING = 24;
+
+        // Only force scrollToBottom if user message + padding fits in viewport
+        if (userH + TOP_PADDING <= containerH) {
+          scrollToBottom();
+        }
+        // else: long message case — skip forced scroll, let user manually scroll down
+      } else {
+        // No user message (shouldn't happen in normal flow), force scroll
+        scrollToBottom();
+      }
     }
-  }, [streaming.mode, streaming.partialContent, scrollToBottom]);
+  }, [streaming.mode, streaming.partialContent, scrollToBottom, messages, threadRef]);
 
   // Detect new AI message → determine stream vs fallback mode.
   useEffect(() => {
