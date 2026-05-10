@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useStickToBottom } from 'use-stick-to-bottom';
 import SampleAnswerButton from '../debug/SampleAnswerButton.jsx';
 
 const ACCENT = '#6e74ff';
@@ -18,11 +19,19 @@ export default function InterviewPage({
   onAbort,
   accent = ACCENT,
 }) {
-  const threadRef = useRef(null);
+  const {
+    scrollRef: threadRef,
+    contentRef: threadContent,
+    scrollToBottom,
+  } = useStickToBottom({
+    resize: 'smooth',
+    initial: 'smooth',
+  });
   const lastUserIdxRef = useRef(-1);
   const lastEvalLenRef = useRef(evaluations.length);
   const streamedIdxRef = useRef(new Set());
   const textareaRef = useRef(null);
+  const streamInitializedRef = useRef(false);
 
   // chatInput state → textarea DOM 단방향 sync.
   // controlled value prop을 쓰지 않는 이유: React 19 + 한글 IME 조합 중
@@ -69,7 +78,17 @@ export default function InterviewPage({
     const delta = nodeRect.top - containerRect.top;
     const target = el.scrollTop + delta - 24;
     el.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, threadRef, threadContent]);
+
+  // Force re-enable stick-to-bottom when stream starts (first chunk arrival).
+  // External scrollTo (snap-to-top) disables the library's auto-scroll.
+  // We must explicitly call scrollToBottom() to re-activate the stick-to-bottom behavior.
+  useEffect(() => {
+    if (streaming.mode === 'stream' && streaming.partialContent && !streamInitializedRef.current) {
+      streamInitializedRef.current = true;
+      scrollToBottom();
+    }
+  }, [streaming.mode, streaming.partialContent, scrollToBottom]);
 
   // Detect new AI message → determine stream vs fallback mode.
   useEffect(() => {
@@ -142,6 +161,7 @@ export default function InterviewPage({
     if (lastMsg.streamDone && streaming.idx !== -1) {
       // streamedIdxRef 표기하여 모드 감지 effect가 폴백으로 진입하는 것을 차단
       streamedIdxRef.current.add(streaming.idx);
+      streamInitializedRef.current = false;
       setStreaming((s) => ({
         ...s,
         idx: -1,
@@ -222,6 +242,21 @@ export default function InterviewPage({
           <div className="iv-brand">
             <span className="iv-brand-dot" style={{ background: accent }} />
             <span>실전 면접 진행 중</span>
+            {typeof window !== 'undefined' && sessionStorage.getItem('MOCK_SESSION') === 'true' && (
+              <span
+                style={{
+                  marginLeft: 'auto',
+                  padding: '2px 6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  backgroundColor: '#10b981',
+                  color: '#fff',
+                  borderRadius: '4px',
+                }}
+              >
+                Mock
+              </span>
+            )}
           </div>
           <div className="iv-progress-block">
             <div className="iv-progress-num">
@@ -323,48 +358,50 @@ export default function InterviewPage({
           </div>
         )}
 
-        <div ref={threadRef} className="iv-thread">
-          {messages.map((m, idx) => {
-            const isLastAi = idx === lastAiIdx && m.role === 'ai';
-            const isStreamingThis = isLastAi && streaming.idx === idx;
+        <div ref={threadRef} className="iv-thread-scroll">
+          <div ref={threadContent} className="iv-thread">
+            {messages.map((m, idx) => {
+              const isLastAi = idx === lastAiIdx && m.role === 'ai';
+              const isStreamingThis = isLastAi && streaming.idx === idx;
 
-            let visibleTokens = null;
-            let showCaret = false;
+              let visibleTokens = null;
+              let showCaret = false;
 
-            if (isStreamingThis) {
-              if (streaming.mode === 'stream') {
-                // 스트림 모드: partialContent를 단일 "토큰"으로 처리
-                visibleTokens = streaming.partialContent ? [streaming.partialContent] : null;
-                showCaret = !streaming.isDone;
-              } else if (streaming.mode === 'fallback') {
-                // 폴백 모드: 기존 token-fade 애니메이션
-                visibleTokens = streaming.tokens.slice(0, streaming.revealed);
-                showCaret = streaming.revealed < streaming.tokens.length;
+              if (isStreamingThis) {
+                if (streaming.mode === 'stream') {
+                  // 스트림 모드: partialContent를 단일 "토큰"으로 처리
+                  visibleTokens = streaming.partialContent ? [streaming.partialContent] : null;
+                  showCaret = !streaming.isDone;
+                } else if (streaming.mode === 'fallback') {
+                  // 폴백 모드: 기존 token-fade 애니메이션
+                  visibleTokens = streaming.tokens.slice(0, streaming.revealed);
+                  showCaret = streaming.revealed < streaming.tokens.length;
+                }
               }
-            }
 
-            return (
-              <Bubble
-                key={idx}
-                idx={idx}
-                m={m}
-                accent={accent}
-                tokens={visibleTokens}
-                showCaret={showCaret}
-              />
-            );
-          })}
-          <div className="iv-thread-spacer" aria-hidden="true" />
-          {isAiTyping && (
-            <div className="bubble bubble-ai bubble-enter">
-              <div className="bubble-author">면접관</div>
-              <div className="bubble-body typing">
-                <span className="td" style={{ background: accent }} />
-                <span className="td" style={{ background: accent }} />
-                <span className="td" style={{ background: accent }} />
+              return (
+                <Bubble
+                  key={idx}
+                  idx={idx}
+                  m={m}
+                  accent={accent}
+                  tokens={visibleTokens}
+                  showCaret={showCaret}
+                />
+              );
+            })}
+            {isAiTyping && (
+              <div className="bubble bubble-ai bubble-enter">
+                <div className="bubble-author">면접관</div>
+                <div className="bubble-body typing">
+                  <span className="td" style={{ background: accent }} />
+                  <span className="td" style={{ background: accent }} />
+                  <span className="td" style={{ background: accent }} />
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+          <div className="iv-thread-spacer" aria-hidden="true" />
         </div>
 
         <div className="iv-input-wrap">

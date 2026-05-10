@@ -697,14 +697,17 @@
   font-family: var(--font-mono); font-size: 12px; color: var(--fg-muted);
 }
 
-.iv-thread {
+.iv-thread-scroll {
   flex: 1; min-height: 0; overflow-y: auto;
+  scroll-behavior: smooth;
+  display: flex; flex-direction: column;
+}
+.iv-thread {
   padding: 40px 40px 24px;
   display: flex; flex-direction: column; gap: 28px;
-  max-width: 880px; width: 100%; margin: 0 auto; align-self: center;
-  scroll-behavior: smooth;
+  max-width: 880px; width: 100%; margin: 0 auto;
 }
-.iv-thread-spacer { flex: 0 0 70vh; min-height: 70vh; }
+.iv-thread-spacer { min-height: 70vh; }
 .bubble { max-width: 88%; }
 .bubble-ai { align-self: flex-start; }
 .bubble-user { align-self: flex-end; }
@@ -903,7 +906,7 @@
   .sum-cta { flex-direction: column; align-items: flex-start; }
   .interview { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height: auto; min-height: calc(100vh - 56px); }
   .iv-rail { border-right: none; border-bottom: 1px solid var(--border); }
-  .iv-stage-head, .iv-thread, .iv-input-wrap { padding-left: 20px; padding-right: 20px; }
+  .iv-stage-head, .iv-thread-scroll, .iv-input-wrap { padding-left: 20px; padding-right: 20px; }
   .eval-toast { right: 16px; top: 72px; }
 }
 
