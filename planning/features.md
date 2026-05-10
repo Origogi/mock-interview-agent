@@ -166,7 +166,7 @@
 | M1 | [~] **Page 4 전체 리디자인** (MUI → CSS-only, hero 카운트업 + 2-컬럼 + 아코디언) 🔄 (세션: FE-M1-p4, since: 2026-05-09 18:00) | FE / Feature | Page 1~3는 Apple-style 적용 완료. Page 4만 남아 톤 단절. 데모 마무리 화면이라 인상 결정적. |
 | M2 | **빈 답변 / 빈 질문 가드** | BE / DevTODO | 발표 중 엔터 오타·빈 응답 시 evaluator가 빈 텍스트로 점수 매김 → 그래프 노이즈. |
 | M3 | **에러 응답 표준화 + thread_id 충돌 방지** | BE / DevTODO | 네트워크 에러·중복 호출 시 프론트 토스트 깔끔히 안내. 1~2시간. |
-| M4 | **SSE 토큰 스트리밍** (F-21 백엔드 부분, ex-S5) | BE / FE | 면접관 응답 체감 속도 = 핵심 가치 #2 "긴장감"의 절반. 현재 클라이언트사이드 모사만이라 진짜 LLM 토큰 페이스가 아님. 발표 시 데모 임팩트 결정적 → Must 격상. |
+| M4 | [x] **SSE 토큰 스트리밍** | BE / FE | 면접관 응답 체감 속도 = 핵심 가치 #2 "긴장감"의 절반. 현재 클라이언트사이드 모사만이라 진짜 LLM 토큰 페이스가 아님. 발표 시 데모 임팩트 결정적 → Must 격상. **완료:** (1) HTTP Chunked NDJSON (`application/x-ndjson`), (2) LangGraph Interviewer 노드 내 `llm.stream()` 사용, (3) 폴백: 기존 동기 `/api/chat` 동작, (4) stream 종료 후 입력창 즉시 활성화 확인 (2026-05-10). |
 
 ### 🟡 Should — 발표 전 가능하면
 
@@ -177,6 +177,7 @@
 | ~~S4~~ ✅ | ~~OpenAI Files API 미사용 호출 제거~~ — `client.files.create(...)` + 응답 `file_id` 삭제. | BE / DevTODO | 완료 |
 | ~~S5~~ ⬆️ | ~~SSE 토큰 스트리밍~~ → **M4로 격상** (Must 표 참조) | BE / FE | 발표 데모 임팩트 결정적이라 판단해 Must 격상 (2026-05-10). |
 | S6 | **Page 4 문항별 아코디언 grid-template-rows 패턴** (F-26 잔여) | FE | Page 3와 통일. M1 리디자인과 함께 처리. |
+| M5 | [~] **Page 3 메시지 컨테이너 자동 스크롤** 🔄 (세션: FE-M5-autoscroll, since: 2026-05-10) | FE / Feature | AI 스트리밍 응답 중 채팅창이 자동으로 하단 따라감 (ChatGPT/Claude 표준 UX). 사용자 수동 스크롤 시 비활성화. 데모 완성도 강화. **수용 기준:** (1) stream 시작 시 자동 스크롤 활성화, (2) 사용자 스크롤 상단 → 자동 스크롤 중단, (3) 새 메시지/stream 도착 시 재활성화 가능, (4) 옵션: "맨 아래로" 버튼 미니 스타일 추가 (기존 UI 재활용). |
 
 ### 🟢 Nice — 발표 후
 
@@ -206,31 +207,27 @@
 
 ## 1.7 Phase 7 — 개발 도구 및 DX 개선
 
-### F-27. 디버그 모드 — 샘플 이력서 진입 [진행 예정]
+### F-27. 디버그 모드 — 샘플 이력서 진입 [구현 완료, 시각 후속 패치 진행 중] 🔄 (세션: FE-F27-patch, since: 2026-05-10)
 **왜**: 개발 검증·데모 중 PDF 업로드 + Resume Parser 분석 과정을 스킵하여 시간·비용 절감. Page 2 요약 → Page 3 실전 면접 → Page 4 리포트 전체 흐름을 빠르게 테스트 가능.
 
 **범위**
-- 어느 페이지에서나 보이는 약한 강조의 "🐞 Debug" 버튼 (목표: 프로덕션 미배포, 개발용)
-- 모달 표시 → "샘플 이력서로 시작" 메뉴 1개
-- 클릭 시 mock `summaryData`를 주입하고 `currentPage='summary'`로 전환
+- TopBar 전역 `DebugMenu` 제거 + `HomePage` 드롭존 좌상단에 28×28 ✨ 버튼으로 통합 (단일 클릭 즉시 주입)
+- 라벨/툴팁: "샘플 이력서로 시작" 재사용
+- 드롭존 클릭 가드 (stopPropagation), 드래그 이벤트 통과 보장
+- 가시성 상태 4종 (빈/드래그 오버/파일 선택/분석 중) 처리
 
-**동작 흐름**
-1. Debug 버튼 클릭 → 모달 열기
-2. "샘플 이력서로 시작" 선택 → mock summaryData 주입 + state update
-3. Page 2 Summary 페이지 정상 표시 (로딩 생략)
-4. 사용자가 "면접 시작" 버튼 클릭 → 기존 `startInterview()` 호출
-5. `/api/chat` → 진짜 LLM이 첫 질문 생성 → Page 3 면접 진행 → Page 4 리포트 (전체 흐름 동작)
-
-**범위 외 (추후 검토)**
-- Page 4 mock 리포트로 직진 (Page 3 LLM 면접 스킵)
-- Page 3 중간 턴 시드 (특정 턴부터 시작)
+**시각 후속 패치 범위**
+- TopBar `DebugMenu` 컴포넌트 제거 (frontend/src/debug/DebugMenu.jsx 삭제)
+- App.jsx 와이어링 정리
+- HomePage 드롭존 좌상단 28×28 ✨ 버튼 추가 및 기능 통합
+- 드롭존 상태별 디자인 적용 확인
+- E2E 검증: 빈 상태 클릭→Page 2 진입, 드래그 오버 시 보더 강조, 파일 피커 미간섭
 
 **구현 팀**
-- 디자이너: Debug 버튼 디자인·위치 결정
-- FE 개발자: 모달 UI + mock summaryData 주입 + 라우팅 로직
+- 디자이너: 드롭존 ✨ 버튼 사양 검수
+- FE 개발자: 시각 통합 패치
 
 **기술 결정**
-- `import.meta.env.DEV` 가드 생략 → 프로덕션 서빙 안 함 (약한 강조로 상시 노출 가능)
 - 백엔드 변경 0건 (FE 단독)
 - mock summaryData는 기존 Page 2 렌더링 확인 테스트 데이터 재사용
 
