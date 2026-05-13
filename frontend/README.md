@@ -8,14 +8,14 @@
 |------|---------|
 | Framework | React (Vite) |
 | Routing | 단일 컴포넌트(`App.jsx`) 내부 `useState` 기반 SPA 전환 (외부 라우터 미사용) |
-| Animation | Framer Motion (Page 4 Recharts 진입), 그 외 페이지는 CSS 애니메이션 |
-| Charts | Recharts (Page 4 결과 리포트) |
+| Animation | CSS keyframes/transitions + `<PageTransition>` |
+| Charts | 커스텀 SVG 레이더 차트 (`ReportPage.jsx`) |
 | Styling | CSS-only (Glassmorphism 디자인 시스템) |
 | Icons | Lucide React (Page 1, 4) |
 
 ## 2. 디자인 시스템
 
-Phase 5에서 Apple-style 미니멀리즘으로 전환. Page 1/2/3 적용 완료, Page 4는 잔여.
+Phase 5에서 Apple-style 미니멀리즘으로 전환. Page 1/2/3/4 적용 완료.
 
 | 항목 | 값 |
 |------|---|
@@ -26,9 +26,9 @@ Phase 5에서 Apple-style 미니멀리즘으로 전환. Page 1/2/3 적용 완료
 | Border Radius | 12px / 18px (input/bubble) / pill (`--radius-pill`) |
 | 모션 | `cubic-bezier(0.22, 0.61, 0.36, 1)` 일관 적용, `prefers-reduced-motion` 가드 |
 
-CSS 토큰은 `src/index.css` 상단 + `src/tokens.css` 에 정의되어 있고, 페이지별 컴포넌트(`HomePage.jsx`, `SummaryPage.jsx`, `InterviewPage.jsx`)에서 일관 사용합니다.
+CSS 토큰은 `src/index.css` 상단 + `src/tokens.css` 에 정의되어 있고, 페이지별 컴포넌트(`HomePage.jsx`, `SummaryPage.jsx`, `InterviewPage.jsx`, `ReportPage.jsx`)에서 일관 사용합니다.
 
-> Page 4 (`renderReport()` in `App.jsx`)의 리디자인은 진행 중입니다. 자세한 내용은 `planning/todo.md` 5.2를 참고하세요.
+> Page 4 리디자인은 `ReportPage.jsx` + `HeroScore.jsx` + CSS-only 레이더/아코디언 구조로 적용 완료되었습니다.
 
 ## 3. 화면 흐름 (Page Flow)
 
@@ -39,7 +39,7 @@ CSS 토큰은 `src/index.css` 상단 + `src/tokens.css` 에 정의되어 있고,
 | Page 1 | `home` | `pages/HomePage.jsx` | 이력서 PDF 드래그&드롭 업로드, 서버 상태 인디케이터 |
 | Page 2 | `summary` | `pages/SummaryPage.jsx` | 분석 로더 → 결과(stat row + 경력 + 스택 + 프로젝트 + 강점/약점) 렌더링 |
 | Page 3 | `interview` | `pages/InterviewPage.jsx` | 좌 레일(진행률 + 평가 카드) + 중앙 채팅 (Claude-style 토큰 fade) |
-| Page 4 | `report` | `App.jsx` 내부 `renderReport()` | 6대 역량 레이더 차트 + 문항별 아코디언 (v1, 리디자인 잔여) |
+| Page 4 | `report` | `pages/ReportPage.jsx` | HeroScore + 4대 역량 커스텀 SVG 레이더 차트 + 문항별 CSS 아코디언 |
 
 ## 4. API 연동
 

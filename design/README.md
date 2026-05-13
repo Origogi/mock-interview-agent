@@ -25,7 +25,7 @@
 | Border Radius | `12px` (카드) / `18px` (input/bubble) / pill (버튼) |
 | 페이지 트랜지션 | zoom + blur cross-fade (out 0.28s → in 0.5s) |
 
-> Page 1/2/3는 v2 적용 완료. Page 4는 v1(MUI Glassmorphism) 잔존 — `planning/todo.md` 5.2 참고.
+> Page 1/2/3/4는 v2 Apple-style CSS-only 기준으로 적용 완료되었습니다. Page 4 상세 사양은 `design/specs/page4_redesign_v1.md`를 참고하세요.
 
 ## 검수 체크리스트
 

@@ -15,6 +15,7 @@ export default function InterviewPage({
   setChatInput,
   isAiTyping,
   isFetchingSample,
+  isClosingInterview = false,
   onSend,
   onFillSampleAnswer,
   onAbort,
@@ -130,14 +131,14 @@ export default function InterviewPage({
     el.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
   }, [messages, threadRef, threadContent]);
 
-  // Force re-enable stick-to-bottom when stream starts (first chunk arrival).
+  // Force re-enable stick-to-bottom when stream starts (first revealed chunk).
   // External scrollTo (snap-to-top) disables the library's auto-scroll.
   // We must explicitly call scrollToBottom() to re-activate the stick-to-bottom behavior.
   // However, if the last user message is long (doesn't fit in container height),
   // the user is near-top and forcing scrollToBottom() creates jarring UX.
   // In that case, allow user to manually scroll down, and the library will auto-detect isNearBottom.
   useEffect(() => {
-    if (streaming.mode === 'stream' && streaming.partialContent && !streamInitializedRef.current) {
+    if (streaming.mode === 'stream' && streaming.revealed > 0 && !streamInitializedRef.current) {
       streamInitializedRef.current = true;
 
       // Check if last user message fits in container
@@ -164,7 +165,7 @@ export default function InterviewPage({
         scrollToBottom();
       }
     }
-  }, [streaming.mode, streaming.partialContent, scrollToBottom, messages, threadRef]);
+  }, [streaming.mode, streaming.revealed, scrollToBottom, messages, threadRef]);
 
   // Detect new AI message → determine stream vs fallback mode.
   useEffect(() => {
@@ -175,7 +176,7 @@ export default function InterviewPage({
     const content = messages[lastAiIdx]?.content || '';
 
     // 스트림 모드 감지: isAiTyping === false + 빈 메시지 = 스트림 시작
-    if (!isAiTyping && content === '' && streaming.mode !== 'stream') {
+    if (!isAiTyping && content === '' && streaming.idx !== lastAiIdx) {
       setStreaming({
         idx: lastAiIdx,
         partialContent: '',
@@ -206,12 +207,45 @@ export default function InterviewPage({
     });
   }, [lastAiIdx, messages, streaming.idx, streaming.mode, isAiTyping]);
 
-  // Drive token reveal (폴백 모드만).
+  // Mirror server-streamed content into the local reveal queue.
+  // Even if the network/browser batches chunks, the UI still reveals tokens progressively.
+  useEffect(() => {
+    if (streaming.mode !== 'stream' || streaming.idx === -1) return;
+    const source = messages[streaming.idx]?.content || '';
+    const currentSource = streaming.tokens.join('');
+    if (source === currentSource) return;
+
+    const tokens = source.match(/\S+\s*/g) || [];
+    setStreaming((s) => {
+      if (s.mode !== 'stream' || s.idx !== streaming.idx) return s;
+      return {
+        ...s,
+        tokens,
+        revealed: Math.min(s.revealed, tokens.length),
+      };
+    });
+  }, [messages, streaming.idx, streaming.mode, streaming.tokens]);
+
+  // Drive token reveal.
   useEffect(() => {
     if (streaming.idx === -1) return;
-    if (streaming.mode !== 'fallback') return; // 폴백 모드만 작동
+    if (streaming.mode !== 'fallback' && streaming.mode !== 'stream') return;
     if (streaming.revealed >= streaming.tokens.length) {
-      streamedIdxRef.current.add(streaming.idx);
+      if (streaming.mode === 'fallback' || streaming.isDone) {
+        streamedIdxRef.current.add(streaming.idx);
+      }
+      if (streaming.mode === 'stream' && streaming.isDone) {
+        streamInitializedRef.current = false;
+        setStreaming((s) => ({
+          ...s,
+          idx: -1,
+          mode: 'idle',
+          partialContent: '',
+          tokens: [],
+          revealed: 0,
+          isDone: false,
+        }));
+      }
       return;
     }
     const prev = streaming.tokens[streaming.revealed - 1];
@@ -223,18 +257,36 @@ export default function InterviewPage({
       : 0;
     const delay = 55 + Math.random() * 30 + pause;
     const t = setTimeout(() => {
-      setStreaming((s) => ({ ...s, revealed: s.revealed + 1 }));
+      setStreaming((s) => {
+        const revealed = Math.min(s.revealed + 1, s.tokens.length);
+        return {
+          ...s,
+          revealed,
+          partialContent: s.tokens.slice(0, revealed).join(''),
+        };
+      });
     }, delay);
     return () => clearTimeout(t);
   }, [streaming]);
 
   // Detect stream completion via message flag (streamDone).
-  // App.jsx가 stream 완료 후 마지막 메시지에 streamDone: true 플래그 박으면,
-  // 이 effect가 감지하여 streaming state를 idle로 리셋.
+  // Server stream may finish before the local reveal queue is fully shown,
+  // so mark it done first and let the reveal driver drain the remaining tokens.
   useEffect(() => {
     if (messages.length === 0) return;
     const lastMsg = messages[messages.length - 1];
     if (lastMsg.streamDone && streaming.idx !== -1) {
+      if (streaming.mode === 'stream') {
+        const source = messages[streaming.idx]?.content || '';
+        const tokens = source.match(/\S+\s*/g) || [];
+        setStreaming((s) => ({
+          ...s,
+          tokens,
+          isDone: true,
+        }));
+        return;
+      }
+
       // streamedIdxRef 표기하여 모드 감지 effect가 폴백으로 진입하는 것을 차단
       streamedIdxRef.current.add(streaming.idx);
       streamInitializedRef.current = false;
@@ -268,18 +320,26 @@ export default function InterviewPage({
   const lastScore = evaluations.length ? evaluations[evaluations.length - 1].score : null;
   const reactionEmoji = lastScore == null ? '🤔' : lastScore >= 8 ? '😌' : lastScore >= 6 ? '🤔' : '😐';
 
-  const isStreaming = streaming.idx !== -1 && (streaming.mode === 'stream' || (streaming.mode === 'fallback' && streaming.revealed < streaming.tokens.length));
+  const isStreamRevealing =
+    streaming.mode === 'stream' && (!streaming.isDone || streaming.revealed < streaming.tokens.length);
+  const isFallbackRevealing =
+    streaming.mode === 'fallback' && streaming.revealed < streaming.tokens.length;
+  const isStreaming = streaming.idx !== -1 && (isStreamRevealing || isFallbackRevealing);
   const busy = isAiTyping || isStreaming;
   const finished = currentQuestionCount > maxQuestions;
-  const inputDisabled = busy || finished || isFetchingSample;
+  const inputDisabled = busy || finished || isFetchingSample || isClosingInterview;
 
-  const progressPct = Math.min((Math.max(currentQuestionCount, 1) - 1) / maxQuestions, 1) * 100;
+  const progressPct = isClosingInterview
+    ? 100
+    : Math.min((Math.max(currentQuestionCount, 1) - 1) / maxQuestions, 1) * 100;
 
   const placeholder = isFetchingSample
     ? '샘플 답변 생성 중…'
+    : isClosingInterview
+    ? '최종 리포트를 준비하는 중이에요…'
     : isAiTyping
     ? '면접관이 분석 중이에요…'
-    : streaming.mode === 'stream'
+    : isStreaming && streaming.mode === 'stream'
     ? '면접관이 답변을 작성하는 중이에요…'
     : isStreaming
     ? '면접관이 말하는 중이에요…'
@@ -364,7 +424,7 @@ export default function InterviewPage({
               />
             </div>
           </div>
-          <button className="iv-end" onClick={onAbort}>
+          <button className="iv-end" onClick={onAbort} disabled={isClosingInterview}>
             <span className="iv-end-x">×</span> 면접 조기 종료
           </button>
         </div>
@@ -417,16 +477,16 @@ export default function InterviewPage({
             {messages.map((m, idx) => {
               const isLastAi = idx === lastAiIdx && m.role === 'ai';
               const isStreamingThis = isLastAi && streaming.idx === idx;
-              const isPendingStream = isStreamingThis && streaming.mode === 'stream' && !streaming.partialContent;
+              const isPendingStream = isStreamingThis && streaming.mode === 'stream' && streaming.revealed === 0;
 
               let visibleTokens = null;
               let showCaret = false;
 
               if (isStreamingThis) {
                 if (streaming.mode === 'stream') {
-                  // 스트림 모드: partialContent를 단일 "토큰"으로 처리
-                  visibleTokens = streaming.partialContent ? [streaming.partialContent] : null;
-                  showCaret = !streaming.isDone;
+                  // 스트림 모드도 로컬 reveal 큐로 표시해 덩어리 업데이트를 방지한다.
+                  visibleTokens = streaming.tokens.slice(0, streaming.revealed);
+                  showCaret = !streaming.isDone || streaming.revealed < streaming.tokens.length;
                 } else if (streaming.mode === 'fallback') {
                   // 폴백 모드: 기존 token-fade 애니메이션
                   visibleTokens = streaming.tokens.slice(0, streaming.revealed);
@@ -457,12 +517,12 @@ export default function InterviewPage({
         </div>
 
         <div className="iv-input-wrap">
-          <div className={`iv-input ${busy ? 'is-disabled' : ''}`}>
+          <div className={`iv-input ${inputDisabled ? 'is-disabled' : ''}`}>
             {/* Sample Answer Button */}
             <div style={{ marginBottom: '12px' }}>
               <SampleAnswerButton
                 onPick={onFillSampleAnswer}
-                disabled={finished || isAiTyping}
+                disabled={finished || isAiTyping || isClosingInterview}
                 isLoading={isFetchingSample}
               />
             </div>

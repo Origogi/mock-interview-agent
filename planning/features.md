@@ -11,9 +11,9 @@
   
 **예시:**
 ```
-[~] M1 Page 4 전체 리디자인 🔄 (세션: FE-P4-redesign, since: 2026-05-10 10:30)
-[x] M2 빈 답변 / 빈 질문 가드
-[ ] M3 에러 응답 표준화 + thread_id 충돌 방지
+[~] 작업명 🔄 (세션: FE-example, since: 2026-05-10 10:30)
+[x] 완료된 작업명
+[ ] 대기 중인 작업명
 ```
 
 **도메인 에이전트 책임:**
@@ -70,13 +70,13 @@
 
 ## 1.5 Phase 5 — UX/UI 고도화 (디자인 검토 반영)
 
-### F-21. Page 3 — 토큰 단위 스트리밍 응답 [부분 완료]
+### F-21. Page 3 — 토큰 단위 스트리밍 응답 [완료]
 **왜**: 응답을 한 번에 표시하면 "AI가 생각하는 긴장감"(핵심 가치 #2)이 약해짐. Claude처럼 토큰이 흘러나오는 시각적 압박이 면접관 페르소나를 강화.
 
 **스펙**
-- [ ] 백엔드: OpenAI `stream=True` (또는 SSE 엔드포인트) 도입, 토큰을 chunk로 푸시
+- [x] 백엔드: OpenAI `stream=True` 기반 HTTP Chunked NDJSON 엔드포인트로 토큰을 chunk 푸시
 - [x] 프론트: 각 토큰을 `<span>`으로 받아 `opacity 0 → 1 + blur(2px) → 0` 페이드 인 (0.32s ease-out)
-- [x] 토큰 도착 페이스: 일반 55ms, 마침표/물음표 후 220ms 호흡 (현재는 클라이언트사이드 모사)
+- [x] 토큰 도착 페이스: 서버 스트림을 프론트 로컬 reveal 큐로 받아 일반 55ms, 마침표/물음표 후 220ms 호흡
 - [x] 스트리밍 중 메시지 끝에 블록 캐럿 (1초 step blink)
 
 ### F-22. Page 3 — 사용자 답변 viewport pin scroll [완료]
@@ -96,13 +96,13 @@
 - [x] 2.6초 후 자동 사라짐
 - [x] 좌측 레일 평가 카드 highlight 페이드아웃으로 갱신 (`is-fresh` 클래스)
 
-### F-24. Page 4 — 차트 진입 애니메이션 [미진행]
+### F-24. Page 4 — 차트 진입 애니메이션 [완료]
 **왜**: 결과 도달의 카타르시스 강화. 정적 차트 < 형성되는 차트.
 
-**스펙** (Page 4 리디자인과 함께 진행 예정)
-- [ ] 레이더 폴리곤이 중심에서 0 → 100% 부풀어 오름 (1.1s ease-out cubic)
-- [ ] 꼭지점 6개 원이 70ms stagger로 스프링 이징 팝 (cubic-bezier(0.34, 1.56, 0.64, 1))
-- [ ] 범례 바: 0% → 실제값 width fill (1.1s, 80ms 간격 stagger)
+**스펙** (Page 4 리디자인과 함께 완료)
+- [x] 레이더 폴리곤이 중심에서 0 → 100% 부풀어 오름
+- [x] 꼭지점 원이 stagger로 스프링 이징 팝
+- [x] 범례 바: 0% → 실제값 width fill
 - [x] 종합 점수 카운트업 (Page 4 기존 구현)
 
 ### F-25. 페이지 간 트랜지션 [완료]
@@ -114,14 +114,14 @@
 - [x] in: scale(1.02 → 1), translateY(8 → 0), blur(6 → 0), opacity 0 → 1
 - [x] `prefers-reduced-motion: reduce` 시 비활성화
 
-### F-26. 아코디언 부드러운 펼침 [부분 완료]
+### F-26. 아코디언 부드러운 펼침 [완료]
 **왜**: 즉시 토글로는 정보 위계가 약함.
 
 **스펙**
 - [x] `grid-template-rows: 0fr → 1fr` 트랜지션 (0.32~0.4s cubic-bezier(0.22, 0.61, 0.36, 1))
 - [x] 내부 컨텐츠는 0.06s 지연 후 fade + translateY(-4 → 0)
 - [x] 셰브론 회전 (Page 3 평가 카드)
-- [ ] Page 4 문항별 상세에 동일 패턴 적용 (현재 MUI Accordion 사용 중)
+- [x] Page 4 문항별 상세에 동일 패턴 적용 (`qa-detail-wrap` grid-template-rows)
 
 ---
 
@@ -163,22 +163,22 @@
 
 | # | 항목 | 분류 | 근거 |
 |---|------|------|------|
-| M1 | [~] **Page 4 전체 리디자인** (MUI → CSS-only, hero 카운트업 + 2-컬럼 + 아코디언) 🔄 (세션: FE-M1-p4, since: 2026-05-09 18:00) | FE / Feature | Page 1~3는 Apple-style 적용 완료. Page 4만 남아 톤 단절. 데모 마무리 화면이라 인상 결정적. |
+| M1 | [x] **Page 4 전체 리디자인** (MUI → CSS-only, hero 카운트업 + 2-컬럼 + 아코디언) | FE / Feature | `ReportPage.jsx` 분리, `HeroScore`, 커스텀 SVG 레이더, 범례 fill, QA grid 아코디언 적용 완료. |
 | M2 | **빈 답변 / 빈 질문 가드** | BE / DevTODO | 발표 중 엔터 오타·빈 응답 시 evaluator가 빈 텍스트로 점수 매김 → 그래프 노이즈. |
 | M3 | **에러 응답 표준화 + thread_id 충돌 방지** | BE / DevTODO | 네트워크 에러·중복 호출 시 프론트 토스트 깔끔히 안내. 1~2시간. |
-| M4 | [x] **SSE 토큰 스트리밍** | BE / FE | 면접관 응답 체감 속도 = 핵심 가치 #2 "긴장감"의 절반. 현재 클라이언트사이드 모사만이라 진짜 LLM 토큰 페이스가 아님. 발표 시 데모 임팩트 결정적 → Must 격상. **완료:** (1) HTTP Chunked NDJSON (`application/x-ndjson`), (2) LangGraph Interviewer 노드 내 `llm.stream()` 사용, (3) 폴백: 기존 동기 `/api/chat` 동작, (4) stream 종료 후 입력창 즉시 활성화 확인 (2026-05-10). |
+| M4 | [x] **SSE 토큰 스트리밍** | BE / FE | 면접관 응답 체감 속도 = 핵심 가치 #2 "긴장감"의 절반. 기존 클라이언트사이드 모사에서 실제 LLM 토큰 스트림으로 전환. **완료:** (1) HTTP Chunked NDJSON (`application/x-ndjson`), (2) LangGraph Interviewer 노드 내 `llm.stream()` 사용, (3) 폴백: 기존 동기 `/api/chat` 동작, (4) stream 종료 후 입력창 즉시 활성화 확인 (2026-05-10). |
 | M6 | [x] **면접 조기 종료 — Must-fallback 미니멈** (F-29 묶음) | BE / FE / Feature | 좌측 레일 종료 alert 스텁이 그대로 노출되면 데모 중 깨짐 위험 → 최소 동작 안전망 확보. **S8(Should 본체)과 동일 PR로 묶어 처리** (TPM 결정). 범위: 종료 버튼 → 확인 모달 → `/api/interview/end` → Page 4 부분 리포트 OR Page 1 복귀 + Toast. **완료:** 2026-05-13 (BE+FE+디자인). |
-| M8 | **`max_questions` 의미 재정의 (옵션 A — 5문항=5답변=5평가)** | BE / DevTODO | `max_questions=5`인데 5턴 진행 시 evaluations가 4건만 누적 → 마지막 질문(Q5)에 답할 기회 없이 Page 4 이동. 옵션 A로 재정의: 5번째 답변까지 받고 평가 5건 누적 후 종료. 영향: `backend/agent.py`의 종료 조건(`should_continue`) + interviewer/evaluator 노드 순서. 가능하면 **M2(빈 답변 가드)와 동일 PR로 묶음**. 회귀 시나리오: 5턴 자연 종료 시 evaluations=5건 / F-29 조기 종료(`count_valid_evaluations`) 시 회귀 0. |
+| M8 | [x] **`max_questions` 의미 재정의 (옵션 A — 5문항=5답변=5평가)** | BE / FE / DevTODO | **완료:** 2026-05-14. 스트리밍 플로우를 `답변 평가 → evaluations 카운트 확인 → 종료 또는 다음 질문 생성` 순서로 재정렬. Q5 답변 후 다음 질문을 만들지 않고 `closing_message`를 3초 노출한 뒤 Page 4로 전환하며, 대기 중 입력/전송/샘플 답변/조기 종료를 잠금. |
 
 ### 🟡 Should — 발표 전 가능하면
 
 | # | 항목 | 분류 | 근거 |
 |---|------|------|------|
-| S1 | **레이더 폴리곤/꼭지점/범례 진입 애니메이션** (F-24) | FE / Feature | Page 4 임팩트의 절반. "Actionable Feedback" 핵심 가치 시각화. M1과 한 묶음. |
+| S1 | [x] **레이더 폴리곤/꼭지점/범례 진입 애니메이션** (F-24) | FE / Feature | Page 4 CSS-only 리디자인과 함께 적용 완료. |
 | ~~S3~~ ✅ | ~~`parse_resume_with_llm`을 LangGraph Node 1로 통합~~ — `agent.py`에 `resume_parser_node` + `parser_graph` 추가. `main.py`는 HTTP routing만 담당. | BE / DevTODO | 완료 |
 | ~~S4~~ ✅ | ~~OpenAI Files API 미사용 호출 제거~~ — `client.files.create(...)` + 응답 `file_id` 삭제. | BE / DevTODO | 완료 |
 | ~~S5~~ ⬆️ | ~~SSE 토큰 스트리밍~~ → **M4로 격상** (Must 표 참조) | BE / FE | 발표 데모 임팩트 결정적이라 판단해 Must 격상 (2026-05-10). |
-| S6 | **Page 4 문항별 아코디언 grid-template-rows 패턴** (F-26 잔여) | FE | Page 3와 통일. M1 리디자인과 함께 처리. |
+| S6 | [x] **Page 4 문항별 아코디언 grid-template-rows 패턴** (F-26) | FE | Page 4 CSS-only 리디자인과 함께 적용 완료. |
 | M5 | [x] **Page 3 메시지 컨테이너 자동 스크롤** | FE / Feature | AI 스트리밍 응답 중 채팅창이 자동으로 하단 따라감 (ChatGPT/Claude 표준 UX). 사용자 수동 스크롤 시 비활성화. **수용 기준:** (A) Snap-to-top: 제출 직후 사용자 말풍선이 뷰포트 상단으로 스크롤, (B) Stick-to-bottom: AI 스트리밍 청크 도착 시 하단 자동 추종 (threshold 80px), (C) User scroll cancels: 스트리밍 중 사용자가 위로 스크롤하면 자동 스크롤 즉시 OFF, (D) Re-engagement: 사용자가 하단 80px 이내까지 재스크롤하면 자동 추종 재활성화, (E) "맨 아래로" 버튼 미노출 (UI 깔끔함 우선). **라이브러리:** `use-stick-to-bottom` (stackblitz-labs/use-stick-to-bottom) — velocity-based spring 애니메이션. **완료:** 2026-05-11 |
 
 ### 🟢 Nice — 발표 후
@@ -188,7 +188,7 @@
 | N1 | 면접 난이도 조절 (Junior/Mid/Hardcore) | FE / BE / Feature | 큰 작업. 핵심 가치 "긴장감" 보강. |
 | ~~N2~~ ✅ | ~~모션 토큰 (duration/easing) 상수화~~ — `tokens.css`에 `--ease-soft/in-quick/spring`, `--dur-quick/fast/medium/slow/page` 추가. `index.css`의 cubic-bezier 17곳 + duration 30+곳 시멘틱 토큰으로 치환. | FE / DevTODO | 완료 |
 | ~~N3~~ ✅ | ~~MUI Theme 잔존 의존성 정리~~ — `src/` import 0건, `package.json` 의존성 0개 확인. `node_modules`의 빈 `@mui/@emotion` 셸 디렉토리 제거. 빌드 통과. | FE / DevTODO | 완료 |
-| N4 | 백엔드 테스트 (pytest + 그래프 mock) | BE / DevTODO | 현재 0개. 회귀 방지. |
+| N4 | [~] **백엔드 테스트 (pytest + 그래프 mock)** — 1차: evaluator_node 실제 LLM + AI Judge pytest 추가 (2026-05-13). | BE / DevTODO | 남은 범위: LangGraph 플로우/mock 기반 회귀 테스트. |
 | N5 | 로깅 개선 (`print` → `logging`, thread_id 추적) | BE / DevTODO | 운영 단계 작업. |
 | N6 | 답변 제한 시간 타이머 | FE / Feature | 핵심 가치 "긴장감" 보강. 줄어드는 게이지 + 초과 시 턴 종료. |
 | N7 | **조기 종료 횟수 텔레메트리** (F-29 후속) | BE / DevTODO | 현재 한 줄 `print`만 추가됨 (advisor [Low] 지적). 운영 단계에서 `logging` 기반 구조화 + thread_id별 종료 사유/턴수 집계 필요. 데모 후 N5 로깅 개선과 묶어 처리. |
@@ -201,6 +201,7 @@
 |---|------|------|------|
 | S7 | **디버그 모드 — 샘플 이력서 빠른 진입** (Phase 7) | FE / DX | 개발 검증·데모 효율화. PDF 업로드/분석 과정 스킵 → mock 데이터로 Page 2 직진. |
 | S8 | [x] **면접 조기 종료 — Should 본체** (F-29 사용자 가치) | BE / FE / Feature | 5턴 완주 어려운 사용자(시간/맥락 이슈)에게 부분 결과라도 회수해 학습 가치 보전. **정책:** 옵션 C (≥3 답변 → 부분 리포트 + 배지/disclaimer, <3 → 폐기 + Toast), 확인 모달 필수. **M6(Must-fallback)와 동일 PR 묶음** (TPM 결정). **완료:** 2026-05-13 — 사양서 / BE `/api/interview/end` + state 확장 + lock / FE `EarlyEndModal` + AbortController + Page 4 분기. 자세한 내용 F-29 참조. |
+| S9 | **점수 3단계 UI 톤 통일** | FE / Design | canonical 기준을 Best 7~10 / Good 5~6 / Bad 1~4로 확정. Page 4 배지는 이미 `good/mid/low`에 가까움. Page 3 토스트·평가 카드·아바타 반응은 현재 일부 binary/다른 threshold라 후속으로 3단계 copy/color/helper 통일 필요. 샘플 답변 티어 데모 품질에 직접 영향이 있어 Should로 승격. |
 
 ---
 
@@ -240,7 +241,7 @@
 ---
 
 ### F-28. 디버그 모드 — 샘플 답변 채우기 [구현 완료, 시각 후속 패치 진행 중]
-**왜**: Page 3 실전 면접 흐름의 답변 입력을 LLM으로 자동 생성해 빠른 검증·데모. 다양한 점수대(Best 8~10 / Good 4~7 / Bad 1~3) 답변을 즉시 비교해 evaluator·report 분기를 효율적으로 테스트.
+**왜**: Page 3 실전 면접 흐름의 답변 입력을 LLM으로 자동 생성해 빠른 검증·데모. 다양한 점수대(Best 7~10 / Good 5~6 / Bad 1~4) 답변을 즉시 비교해 evaluator·report 분기를 효율적으로 테스트.
 
 **범위**
 - InterviewPage(Page 3) composer 상단 좌측 ✨ 버튼 + 위로 솟는 드롭업 (3 등급 항목)
@@ -258,6 +259,7 @@
 **구현 결정 (PM 합의)**
 - 버튼 위치는 TopBar Debug 메뉴가 아닌 **InterviewPage 인-페이지 컨트롤** (composer 인접)
 - 단일 ✨ 버튼 + 드롭업 (3-칩 평면 노출 X — 디버그 노이즈 최소화)
+- 점수 tier 기준은 서비스 표시 기준과 일치: **Best 7~10 / Good 5~6 / Bad 1~4**
 - finished/isAiTyping 시 **버튼 hidden** (디자이너 권장)
 - IME 회귀 방지: `setChatInput()`만 사용, `textareaRef` 직접 조작 X
 - 별도 `isFetchingSample` state — `isAiTyping` 재사용 X

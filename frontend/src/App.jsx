@@ -9,6 +9,10 @@ import Toast from './components/Toast.jsx';
 import EarlyEndModal from './components/EarlyEndModal.jsx';
 import { FIXTURE_SAMPLE_RESUME } from './debug/fixtures.js';
 
+const REPORT_TRANSITION_DELAY_MS = 3000;
+const DEFAULT_CLOSING_MESSAGE =
+  '좋습니다. 여기까지 5개 질문에 대한 답변을 모두 확인했습니다. 이제 전체 답변을 바탕으로 최종 리포트를 정리하겠습니다.';
+
 // BE가 evaluations[0].question을 빈 문자열로 내려보내는 케이스가 있어,
 // 첫 번째 AI 메시지(첫 질문) 본문으로 복구한다. 나머지 인덱스는 BE 응답 그대로 사용.
 function normalizeEvaluations(rawEvaluations, messages) {
@@ -40,12 +44,56 @@ function App() {
   const [isFetchingSample, setIsFetchingSample] = useState(false);
   const [threadId, setThreadId] = useState(null);
   const [finalReport, setFinalReport] = useState(null);
+  const [isClosingInterview, setIsClosingInterview] = useState(false);
 
   // F-29 Early Termination state
   const [earlyEndOpen, setEarlyEndOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [toastSeverity, setToastSeverity] = useState('info');
   const streamAbortRef = useRef(null);
+  const reportTransitionRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (reportTransitionRef.current) {
+        clearTimeout(reportTransitionRef.current);
+      }
+    };
+  }, []);
+
+  const clearReportTransition = () => {
+    if (reportTransitionRef.current) {
+      clearTimeout(reportTransitionRef.current);
+      reportTransitionRef.current = null;
+    }
+  };
+
+  const scheduleReportTransition = () => {
+    clearReportTransition();
+    reportTransitionRef.current = setTimeout(() => {
+      setCurrentPage('report');
+      setIsClosingInterview(false);
+      reportTransitionRef.current = null;
+    }, REPORT_TRANSITION_DELAY_MS);
+  };
+
+  const showClosingMessage = (message) => {
+    const content = message || DEFAULT_CLOSING_MESSAGE;
+    setMessages((prev) => {
+      if (!prev.length) {
+        return [{ role: 'ai', content, streamDone: true }];
+      }
+
+      const updated = [...prev];
+      const last = updated[updated.length - 1];
+      if (last.role === 'ai' && !last.content) {
+        updated[updated.length - 1] = { ...last, content, streamDone: true };
+        return updated;
+      }
+
+      return [...updated, { role: 'ai', content, streamDone: true }];
+    });
+  };
 
   useEffect(() => {
     const checkServer = async () => {
@@ -108,9 +156,11 @@ function App() {
   };
 
   const startInterview = async (summary) => {
+    clearReportTransition();
     const newThreadId = crypto.randomUUID();
     setThreadId(newThreadId);
     setFinalReport(null);
+    setIsClosingInterview(false);
     setCurrentPage('interview');
     setIsAiTyping(true);
     try {
@@ -131,7 +181,7 @@ function App() {
   };
 
   const sendAnswer = async (answer) => {
-    if (!answer.trim() || !threadId || isAiTyping) return;
+    if (!answer.trim() || !threadId || isAiTyping || isClosingInterview) return;
     setMessages((prev) => [...prev, { role: 'user', content: answer }]);
     setChatInput('');
     setIsAiTyping(true);
@@ -205,8 +255,10 @@ function App() {
         setCurrentQuestionCount(streamDoneData.question_count);
         if (streamDoneData.is_finished) {
           setFinalReport(streamDoneData.final_report);
-          setTimeout(() => setCurrentPage('report'), 2000);
-          setMessages((prev) => [...prev, { role: 'ai', content: '면접이 모두 완료되었습니다! 결과를 집계하는 중...' }]);
+          setIsAiTyping(false);
+          setIsClosingInterview(true);
+          showClosingMessage(streamDoneData.closing_message);
+          scheduleReportTransition();
         }
         // Mark stream completion for InterviewPage to detect
         setMessages((prev) => {
@@ -240,8 +292,9 @@ function App() {
         setCurrentQuestionCount(data.question_count);
         if (data.is_finished) {
           setFinalReport(data.final_report);
-          setTimeout(() => setCurrentPage('report'), 2000);
-          setMessages((prev) => [...prev, { role: 'ai', content: '면접이 모두 완료되었습니다! 결과를 집계하는 중...' }]);
+          setIsClosingInterview(true);
+          showClosingMessage(data.closing_message);
+          scheduleReportTransition();
         } else {
           setMessages((prev) => [...prev, { role: 'ai', content: data.question }]);
         }
@@ -259,7 +312,7 @@ function App() {
   };
 
   const handleFillSampleAnswer = async (tier) => {
-    if (!threadId || isFetchingSample || isAiTyping) return;
+    if (!threadId || isFetchingSample || isAiTyping || isClosingInterview) return;
     setIsFetchingSample(true);
     try {
       const res = await fetch('http://localhost:8000/api/debug/sample-answer', {
@@ -290,16 +343,18 @@ function App() {
   };
 
   const handleRestartOrClearMock = () => {
+    clearReportTransition();
     setCurrentPage('home');
     setMessages([]);
     setEvaluations([]);
     setFinalReport(null);
+    setIsClosingInterview(false);
     setIsMockSession(false);
   };
 
   // F-29 Early Termination: Step 1 — open modal (no API yet)
   const handleEarlyEndOpen = () => {
-    if (earlyEndOpen) return;
+    if (earlyEndOpen || isClosingInterview) return;
     setEarlyEndOpen(true);
   };
 
@@ -340,6 +395,8 @@ function App() {
         setToastSeverity('info');
         setToastMsg('이미 면접이 종료되었어요. 결과 리포트로 이동합니다.');
         if (finalReport) {
+          clearReportTransition();
+          setIsClosingInterview(false);
           setCurrentPage('report');
         }
         return;
@@ -412,6 +469,7 @@ function App() {
               setChatInput={setChatInput}
               isAiTyping={isAiTyping}
               isFetchingSample={isFetchingSample}
+              isClosingInterview={isClosingInterview}
               onSend={sendAnswer}
               onFillSampleAnswer={handleFillSampleAnswer}
               onAbort={handleEarlyEndOpen}

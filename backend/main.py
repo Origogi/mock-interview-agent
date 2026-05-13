@@ -25,6 +25,11 @@ load_dotenv() # Load variables from .env
 
 app = FastAPI(title="Tech-Interviewer API")
 
+INTERVIEW_CLOSING_MESSAGE = (
+    "좋습니다. 여기까지 5개 질문에 대한 답변을 모두 확인했습니다. "
+    "이제 전체 답변을 바탕으로 최종 리포트를 정리하겠습니다."
+)
+
 # CORS middleware to allow React frontend to communicate with FastAPI
 app.add_middleware(
     CORSMiddleware,
@@ -140,6 +145,7 @@ async def chat(request: ChatRequest):
         # 면접 종료: 최종 리포트 반환
         return {
             "question": None,
+            "closing_message": INTERVIEW_CLOSING_MESSAGE,
             "question_count": current_values.get("question_count", 0),
             "evaluations": current_values.get("evaluations", []),
             "is_finished": True,
@@ -158,11 +164,11 @@ async def chat_stream_generator(request: ChatRequest) -> AsyncGenerator[str, Non
     - Route handler directly calls llm.stream() instead of using Interviewer node
     - This separates stream chunk emission (yield) from state mutations
     - Interviewer logic runs in route handler, then Evaluator/Report nodes via direct invocation
-    - Flow: Stream question tokens → complete question → Evaluator/Report run → emit done event
+    - Flow: Evaluate answer → finish or stream next question → emit done event
 
     Implementation:
     1. If user_answer is None (first request): Initialize graph state, stream first question
-    2. If user_answer provided: Evaluate previous answer, stream next question, run report if needed
+    2. If user_answer provided: Evaluate previous answer first, then finish or stream next question
     3. After streaming: emit "done" event with final response payload
     """
     config = {"configurable": {"thread_id": request.thread_id}}
@@ -179,6 +185,7 @@ async def chat_stream_generator(request: ChatRequest) -> AsyncGenerator[str, Non
             if existing_state.values and existing_state.values.get("final_report") is not None:
                 response_data = {
                     "question": None,
+                    "closing_message": INTERVIEW_CLOSING_MESSAGE,
                     "question_count": existing_state.values.get("question_count", 0),
                     "evaluations": existing_state.values.get("evaluations", []),
                     "is_finished": True,
@@ -218,59 +225,72 @@ async def chat_stream_generator(request: ChatRequest) -> AsyncGenerator[str, Non
                 print(f"[Stream] First question state updated, question_count=1", flush=True)
             else:
                 # ──────────────────────────────────────────────────────────
-                # Answer submission: evaluate previous answer, stream next question
+                # Answer submission: evaluate previous answer, then decide finish/continue.
                 # ──────────────────────────────────────────────────────────
 
                 # (1) Get current state
                 state = graph.get_state(config)
                 current_values = state.values
-
-                # (2) Stream next question (Interviewer logic)
-                resume_str = json.dumps(current_values["resume_summary"], ensure_ascii=False, indent=2)
-                evals_str = (
-                    json.dumps(current_values.get("evaluations", []), ensure_ascii=False, indent=2)
-                    if current_values.get("evaluations")
-                    else "없음 (첫 번째 질문)"
-                )
-                system = INTERVIEWER_SYSTEM.format(resume_summary=resume_str, evaluations=evals_str)
-
                 existing_messages = current_values.get("messages", [])
-                messages_for_llm = [SystemMessage(content=system)] + existing_messages + [HumanMessage(content=request.user_answer)]
+                answer_message = HumanMessage(content=request.user_answer)
 
-                question_text = ""
-                for chunk in llm.stream(messages_for_llm):
-                    token = chunk.content if hasattr(chunk, 'content') else ""
-                    if token:
-                        question_text += token
-                        yield json.dumps({"type": "token", "value": token}, ensure_ascii=False) + "\n"
+                # (2) Evaluate answer against the currently pending question.
+                state_for_eval = dict(current_values)
+                state_for_eval["messages"] = existing_messages + [answer_message]
+                eval_result = evaluator_node(state_for_eval)
 
-                # (3) Update state: add answer + next question
-                updated_messages = existing_messages + [
-                    HumanMessage(content=request.user_answer),
-                    AIMessage(content=question_text)
-                ]
+                current_evaluations = current_values.get("evaluations", [])
+                next_evaluations = current_evaluations + eval_result.get("evaluations", [])
+                question_count = current_values.get("question_count", 0)
+                max_questions = current_values.get("max_questions", 5)
+                is_finished = len(next_evaluations) >= max_questions
 
-                updated_state = {
-                    "resume_summary": current_values["resume_summary"],
-                    "messages": updated_messages,
-                    "question_count": current_values.get("question_count", 0) + 1,
-                    "max_questions": current_values.get("max_questions", 5),
-                    "evaluations": current_values.get("evaluations", []),
-                    "final_report": current_values.get("final_report"),
-                }
+                if is_finished:
+                    # Last answer: do not generate another question. Persist answer/eval/report only.
+                    state_for_report = dict(current_values)
+                    state_for_report["messages"] = existing_messages + [answer_message]
+                    state_for_report["evaluations"] = next_evaluations
+                    report_result = report_node(state_for_report)
 
-                # (4) Evaluate the answer (against previous question, not the question we just generated)
-                eval_result = evaluator_node(updated_state)
-                updated_state.update(eval_result)
+                    graph.update_state(
+                        config,
+                        {
+                            "messages": [answer_message],
+                            "evaluations": eval_result.get("evaluations", []),
+                            "answered_count": len(next_evaluations),
+                            "final_report": report_result["final_report"],
+                        },
+                    )
+                    print(
+                        f"[Stream] Final answer evaluated, report generated, evaluations={len(next_evaluations)}",
+                        flush=True,
+                    )
+                else:
+                    # Continue: use the fresh evaluation context to generate the next question.
+                    resume_str = json.dumps(current_values["resume_summary"], ensure_ascii=False, indent=2)
+                    evals_str = json.dumps(next_evaluations, ensure_ascii=False, indent=2)
+                    system = INTERVIEWER_SYSTEM.format(resume_summary=resume_str, evaluations=evals_str)
+                    messages_for_llm = [SystemMessage(content=system)] + existing_messages + [answer_message]
 
-                # (5) Generate report if max_questions reached
-                if updated_state["question_count"] >= updated_state["max_questions"]:
-                    report_result = report_node(updated_state)
-                    updated_state.update(report_result)
+                    question_text = ""
+                    for chunk in llm.stream(messages_for_llm):
+                        token = chunk.content if hasattr(chunk, 'content') else ""
+                        if token:
+                            question_text += token
+                            yield json.dumps({"type": "token", "value": token}, ensure_ascii=False) + "\n"
 
-                # Save updated state
-                graph.update_state(config, updated_state)
-                print(f"[Stream] Answer evaluated and next question state updated, question_count={updated_state['question_count']}", flush=True)
+                    graph.update_state(
+                        config,
+                        {
+                            "messages": [answer_message, AIMessage(content=question_text)],
+                            "evaluations": eval_result.get("evaluations", []),
+                            "question_count": question_count + 1,
+                        },
+                    )
+                    print(
+                        f"[Stream] Answer evaluated and next question streamed, question_count={question_count + 1}",
+                        flush=True,
+                    )
 
             # ─────────────────────────────────────────────────────────
             # Build response payload
@@ -278,15 +298,21 @@ async def chat_stream_generator(request: ChatRequest) -> AsyncGenerator[str, Non
             state = graph.get_state(config)
             current_values = state.values
 
-            # Check if interview is finished (no more questions OR max reached)
+            # A question_count of max_questions means Q5 has been asked, not answered.
+            # Natural finish only starts after the max-th evaluation/report exists.
             question_count = current_values.get("question_count", 0)
             max_questions = current_values.get("max_questions", 5)
-            is_finished = (question_count >= max_questions) or current_values.get("final_report") is not None
+            evaluations = current_values.get("evaluations", [])
+            is_finished = (
+                current_values.get("final_report") is not None
+                or len(evaluations) >= max_questions
+            )
 
             response_data = {
                 "question": None if is_finished else current_values.get("messages", [])[-1].content if current_values.get("messages") else None,
+                "closing_message": INTERVIEW_CLOSING_MESSAGE if is_finished else None,
                 "question_count": question_count,
-                "evaluations": current_values.get("evaluations", []),
+                "evaluations": evaluations,
                 "is_finished": is_finished,
                 "final_report": current_values.get("final_report"),
             }

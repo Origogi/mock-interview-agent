@@ -1,15 +1,17 @@
 # Page 4 리디자인 사양서 (v1) — Apple-style CSS-only
 
-**작성일:** 2026-05-10 | **마감:** 2026-05-19 (D-9) | **상태:** M1 구현 플랜  
+**작성일:** 2026-05-10 | **마감:** 2026-05-19 | **상태:** 구현 완료
 **목표:** Page 1~3과 동일한 Apple-style(다크 Glassmorphism, CSS-only) 톤으로 Page 4 통일. Hero 카운트업 + 2-컬럼 + 문항별 아코디언으로 최종 리포트 시각화.
+
+> 구현 반영: `frontend/src/pages/ReportPage.jsx`, `frontend/src/components/HeroScore.jsx`, `frontend/src/index.css`의 Page 4 스타일.
 
 ---
 
 ## 1. 현 상태 분석 (Visual Audit)
 
-### 1.1 톤 단절 현황
+### 1.1 톤 단절 현황 (사양 작성 당시)
 - **Page 1~3:** v2 Apple-style (Pretendard/Inter, 다크 배경 #000, accent #6e74ff, radius 18px, CSS-only)
-- **Page 4 현재:** v1 MUI Glassmorphism 잔존 (커밋 7c9f7b1에서 MUI 의존 제거 완료했지만, 디자인 토큰과 인터랙션 체계는 일관성 부족)
+- **Page 4 당시:** v1 MUI Glassmorphism 잔존 (커밋 7c9f7b1에서 MUI 의존 제거 완료했지만, 디자인 토큰과 인터랙션 체계는 일관성 부족)
 
 ### 1.2 주요 갭 포인트
 1. **Hero 영역:** 현재는 단순 타이틀만 있음 → 종합 점수를 크게 표시하고 0에서 최종값으로 카운트업되는 애니메이션 필요

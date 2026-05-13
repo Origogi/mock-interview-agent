@@ -639,6 +639,8 @@
   transition: all var(--dur-quick);
 }
 .iv-end:hover { background: rgba(255,107,107,0.08); border-color: #ff6b6b; }
+.iv-end:disabled { opacity: 0.45; cursor: not-allowed; }
+.iv-end:disabled:hover { background: transparent; border-color: var(--border); }
 .iv-end-x { font-size: 16px; line-height: 1; }
 
 .iv-rail-evals { flex: 1; min-height: 0; overflow-y: auto; padding: 24px 20px; }
