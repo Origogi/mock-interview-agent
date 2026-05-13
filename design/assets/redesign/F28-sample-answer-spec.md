@@ -55,11 +55,11 @@ InterviewPage(Page 3) 채팅 영역의 composer 상단 좌측에 "✨" 버튼을
 ┌──────────────────────┐
 │ ✨ 샘플 답변          │  (헤더, 글자크기 12px, 추가 조작 없음)
 ├──────────────────────┤
-│ ✨ Best (8~10)       │  (호버 bg, 클릭 → 호출)
+│ ✨ Best (7~10)       │  (호버 bg, 클릭 → 호출)
 ├──────────────────────┤
-│ 🙂 Good (4~7)        │  (호버 bg)
+│ 🙂 Good (5~6)        │  (호버 bg)
 ├──────────────────────┤
-│ 🥲 Bad (1~3)         │  (호버 bg)
+│ 🥲 Bad (1~4)         │  (호버 bg)
 └──────────────────────┘
 ```
 
@@ -256,13 +256,13 @@ InterviewPage(Page 3) 채팅 영역의 composer 상단 좌측에 "✨" 버튼을
     <div class="iv-sample-dropdown" id="sampleDropdown" style="display: none;">
       <div class="sample-dropdown-header">✨ 샘플 답변</div>
       <button class="sample-item" data-level="best">
-        ✨ Best (8~10)
+        ✨ Best (7~10)
       </button>
       <button class="sample-item" data-level="good">
-        🙂 Good (4~7)
+        🙂 Good (5~6)
       </button>
       <button class="sample-item" data-level="bad">
-        🥲 Bad (1~3)
+        🥲 Bad (1~4)
       </button>
     </div>
   </div>

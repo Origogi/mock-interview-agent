@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
 const TIERS = [
-  { key: 'best', emoji: '✨', label: 'Best', score: '8~10' },
-  { key: 'good', emoji: '🙂', label: 'Good', score: '4~7' },
-  { key: 'bad', emoji: '🥲', label: 'Bad', score: '1~3' },
+  { key: 'best', emoji: '✨', label: 'Best', score: '7~10' },
+  { key: 'good', emoji: '🙂', label: 'Good', score: '5~6' },
+  { key: 'bad', emoji: '🥲', label: 'Bad', score: '1~4' },
 ];
 
 export default function SampleAnswerButton({ onPick, disabled, isLoading }) {

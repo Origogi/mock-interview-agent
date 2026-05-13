@@ -33,7 +33,7 @@ def generate_sample_answer(thread_id: str, quality_tier: str) -> Dict:
 
     Args:
         thread_id: LangGraph thread ID (from chat session).
-        quality_tier: One of "best" (8-10 score), "good" (4-7), or "bad" (1-3).
+        quality_tier: One of "best" (7-10 score), "good" (5-6), or "bad" (1-4).
 
     Returns:
         Dictionary with "answer" (str) and "expected_score_range" ([low, high]).
@@ -42,9 +42,9 @@ def generate_sample_answer(thread_id: str, quality_tier: str) -> Dict:
 
     # Validate tier
     TIER_RANGES = {
-        "best": [8, 10],
-        "good": [4, 7],
-        "bad": [1, 3],
+        "best": [7, 10],
+        "good": [5, 6],
+        "bad": [1, 4],
     }
     if quality_tier not in TIER_RANGES:
         raise ValueError(f"quality_tier must be one of {list(TIER_RANGES.keys())}")
@@ -83,7 +83,7 @@ def generate_sample_answer(thread_id: str, quality_tier: str) -> Dict:
     # Build prompt based on tier
     tier_instructions = {
         "best": """당신은 면접 답변 생성 전문가입니다.
-주어진 질문에 대해 우수한 답변 (8-10점 수준)을 생성하세요.
+주어진 질문에 대해 우수한 답변 (7-10점 수준)을 생성하세요.
 
 우수 답변의 특징:
 - 구체적인 경험과 기술적 의사결정 근거 포함
@@ -93,17 +93,17 @@ def generate_sample_answer(thread_id: str, quality_tier: str) -> Dict:
 - 명확하고 자신감 있는 톤""",
 
         "good": """당신은 면접 답변 생성 전문가입니다.
-주어진 질문에 대해 평범한 답변 (4-7점 수준)을 생성하세요.
+주어진 질문에 대해 보통 수준의 답변 (5-6점 수준)을 생성하세요.
 
-평범 답변의 특징:
+보통 답변의 특징:
 - 기본적으로 정확한 내용이지만 깊이 부족
 - 경험을 언급하지만 구체성 부족
 - 일부 일반론적 표현 포함
-- 자신감은 있으나 세부 사항 미흡
-- 답변은 맞지만 '왜?'에는 명확히 대답하지 못함""",
+- 큰 방향은 맞지만 세부 사항 미흡
+- 답변은 맞지만 '왜?'와 트레이드오프에는 명확히 대답하지 못함""",
 
         "bad": """당신은 면접 답변 생성 전문가입니다.
-주어진 질문에 대해 부족한 답변 (1-3점 수준)을 생성하세요.
+주어진 질문에 대해 부족한 답변 (1-4점 수준)을 생성하세요.
 
 부족 답변의 특징:
 - 표면적이고 모호한 표현
