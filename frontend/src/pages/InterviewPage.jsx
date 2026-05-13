@@ -4,6 +4,7 @@ import SampleAnswerButton from '../debug/SampleAnswerButton.jsx';
 
 const ACCENT = '#6e74ff';
 const TOAST_MS = 2600;
+const USER_PIN_TOP_OFFSET = 72;
 
 export default function InterviewPage({
   messages,
@@ -90,8 +91,7 @@ export default function InterviewPage({
     }
 
     const GAP = 28;
-    const TOP_PADDING = 24;
-    const target = Math.max(0, containerH - userH - lastAiH - GAP - TOP_PADDING);
+    const target = Math.max(0, containerH - userH - lastAiH - GAP - USER_PIN_TOP_OFFSET);
     spacerRef.current.style.height = `${target}px`;
   }, [messages]);
 
@@ -126,7 +126,7 @@ export default function InterviewPage({
     const containerRect = el.getBoundingClientRect();
     const nodeRect = node.getBoundingClientRect();
     const delta = nodeRect.top - containerRect.top;
-    const target = el.scrollTop + delta - 24;
+    const target = el.scrollTop + delta - USER_PIN_TOP_OFFSET;
     el.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
   }, [messages, threadRef, threadContent]);
 
@@ -154,10 +154,8 @@ export default function InterviewPage({
         const userEl = threadRef.current.querySelector(`[data-msg-idx="${lastUserIdx}"]`);
         const userH = userEl?.offsetHeight ?? 0;
         const containerH = threadRef.current.clientHeight ?? 0;
-        const TOP_PADDING = 24;
-
         // Only force scrollToBottom if user message + padding fits in viewport
-        if (userH + TOP_PADDING <= containerH) {
+        if (userH + USER_PIN_TOP_OFFSET <= containerH) {
           scrollToBottom();
         }
         // else: long message case — skip forced scroll, let user manually scroll down
@@ -336,6 +334,21 @@ export default function InterviewPage({
               </span>
             )}
           </div>
+
+          <div className="iv-side-profile">
+            <div
+              className={`iv-avatar ${busy ? 'is-busy' : ''}`}
+              style={{ borderColor: accent }}
+            >
+              <span className="iv-avatar-emoji">{reactionEmoji}</span>
+              {busy && <span className="iv-avatar-pulse" style={{ borderColor: accent }} />}
+            </div>
+            <div className="iv-side-profile-copy">
+              <div className="iv-int-name">시니어 엔지니어 면접관</div>
+              <div className="iv-int-role">Tech-Interviewer AI · gpt-4o-mini</div>
+            </div>
+          </div>
+
           <div className="iv-progress-block">
             <div className="iv-progress-num">
               <span className="big" style={{ color: accent }}>
@@ -381,43 +394,6 @@ export default function InterviewPage({
       </aside>
 
       <main className="iv-stage">
-        <header className="iv-stage-head">
-          <div className="iv-interviewer">
-            <div
-              className={`iv-avatar ${busy ? 'is-busy' : ''}`}
-              style={{ borderColor: accent }}
-            >
-              <span className="iv-avatar-emoji">{reactionEmoji}</span>
-              {busy && <span className="iv-avatar-pulse" style={{ borderColor: accent }} />}
-            </div>
-            <div>
-              <div className="iv-int-name">시니어 엔지니어 면접관</div>
-              <div className="iv-int-role">
-                {streaming.mode === 'stream' ? (
-                  <>
-                    <span className="rec-dot" style={{ background: accent }} /> 답변 생성 중…
-                  </>
-                ) : isStreaming ? (
-                  <>
-                    <span className="rec-dot" style={{ background: accent }} /> 답변 표시 중…
-                  </>
-                ) : isAiTyping ? (
-                  <>
-                    <span className="rec-dot" style={{ background: accent }} /> 분석 중…
-                  </>
-                ) : (
-                  'Tech-Interviewer AI · gpt-4o-mini'
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="iv-stage-meta">
-            <span className="iv-stage-pill">
-              Q{Math.min(currentQuestionCount, maxQuestions)}
-            </span>
-          </div>
-        </header>
-
         {latestEval && (
           <div
             className="eval-toast"
@@ -441,6 +417,7 @@ export default function InterviewPage({
             {messages.map((m, idx) => {
               const isLastAi = idx === lastAiIdx && m.role === 'ai';
               const isStreamingThis = isLastAi && streaming.idx === idx;
+              const isPendingStream = isStreamingThis && streaming.mode === 'stream' && !streaming.partialContent;
 
               let visibleTokens = null;
               let showCaret = false;
@@ -465,17 +442,14 @@ export default function InterviewPage({
                   accent={accent}
                   tokens={visibleTokens}
                   showCaret={showCaret}
+                  isPending={isPendingStream}
                 />
               );
             })}
             {isAiTyping && (
               <div className="bubble bubble-ai bubble-enter">
                 <div className="bubble-author">면접관</div>
-                <div className="bubble-body typing">
-                  <span className="td" style={{ background: accent }} />
-                  <span className="td" style={{ background: accent }} />
-                  <span className="td" style={{ background: accent }} />
-                </div>
+                <TypingStatus accent={accent} />
               </div>
             )}
             <div ref={spacerRef} className="iv-thread-spacer" aria-hidden="true" />
@@ -521,13 +495,15 @@ export default function InterviewPage({
   );
 }
 
-function Bubble({ idx, m, accent, tokens, showCaret }) {
+function Bubble({ idx, m, accent, tokens, showCaret, isPending = false }) {
   const isAi = m.role === 'ai';
   return (
     <div className={`bubble bubble-${m.role} bubble-enter`} data-msg-idx={idx}>
       {isAi && <div className="bubble-author">면접관</div>}
       <div className="bubble-body" style={!isAi ? { background: accent } : null}>
-        {isAi && tokens
+        {isPending ? (
+          <TypingStatus accent={accent} />
+        ) : isAi && tokens
           ? tokens.map((tok, i) => (
               <span key={i} className="tok">
                 {tok}
@@ -536,6 +512,15 @@ function Bubble({ idx, m, accent, tokens, showCaret }) {
           : m.content}
         {showCaret && <span className="stream-caret" style={{ background: accent }} />}
       </div>
+    </div>
+  );
+}
+
+function TypingStatus({ accent }) {
+  return (
+    <div className="typing-status" role="status" aria-live="polite">
+      <span className="rec-dot" style={{ background: accent }} />
+      <span>답변 생성 중...</span>
     </div>
   );
 }

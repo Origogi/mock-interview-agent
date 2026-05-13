@@ -608,6 +608,20 @@
 .iv-rail-top { padding: 32px 28px; border-bottom: 1px solid var(--border); }
 .iv-brand { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 28px; }
 .iv-brand-dot { width: 6px; height: 6px; border-radius: 50%; }
+.iv-side-profile {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.iv-side-profile-copy { min-width: 0; }
+.iv-side-profile .iv-int-name,
+.iv-side-profile .iv-int-role {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .iv-progress-block { margin-bottom: 24px; }
 .iv-progress-num { display: flex; align-items: baseline; gap: 8px; font-family: var(--font-display); }
 .iv-progress-num .big { font-size: 64px; font-weight: 600; letter-spacing: -0.04em; line-height: 1; }
@@ -691,12 +705,6 @@
 .iv-avatar-emoji { font-size: 24px; line-height: 1; }
 .iv-int-name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
 .iv-int-role { font-size: 12px; color: var(--fg-dim); margin-top: 2px; font-family: var(--font-mono); }
-.iv-stage-pill {
-  padding: 6px 12px; border-radius: var(--radius-pill);
-  background: var(--surface); border: 1px solid var(--border);
-  font-family: var(--font-mono); font-size: 12px; color: var(--fg-muted);
-}
-
 .iv-thread-scroll {
   flex: 1; min-height: 0; overflow-y: auto;
   scroll-behavior: smooth;
@@ -730,6 +738,14 @@
 .bubble-user .bubble-body {
   color: white; border: none;
   border-bottom-right-radius: 6px;
+}
+.typing-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--fg-muted);
+  font-size: 15px;
+  line-height: 1.5;
 }
 .bubble-body.typing { display: inline-flex; gap: 4px; padding: 4px 0; background: transparent; border: none; }
 .td { width: 6px; height: 6px; border-radius: 50%; background: var(--fg-muted); animation: pulse 1.4s ease-in-out infinite; }
