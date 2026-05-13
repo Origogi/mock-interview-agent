@@ -1,11 +1,13 @@
 # Runtime files
 *.pid
+frontend.log
 backend/backend.log
 frontend/frontend.log
 
 # Env
 .env
 backend/.env
+AGENTS.md
 
 # Dependencies
 node_modules/

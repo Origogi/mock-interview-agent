@@ -167,6 +167,8 @@
 | M2 | **빈 답변 / 빈 질문 가드** | BE / DevTODO | 발표 중 엔터 오타·빈 응답 시 evaluator가 빈 텍스트로 점수 매김 → 그래프 노이즈. |
 | M3 | **에러 응답 표준화 + thread_id 충돌 방지** | BE / DevTODO | 네트워크 에러·중복 호출 시 프론트 토스트 깔끔히 안내. 1~2시간. |
 | M4 | [x] **SSE 토큰 스트리밍** | BE / FE | 면접관 응답 체감 속도 = 핵심 가치 #2 "긴장감"의 절반. 현재 클라이언트사이드 모사만이라 진짜 LLM 토큰 페이스가 아님. 발표 시 데모 임팩트 결정적 → Must 격상. **완료:** (1) HTTP Chunked NDJSON (`application/x-ndjson`), (2) LangGraph Interviewer 노드 내 `llm.stream()` 사용, (3) 폴백: 기존 동기 `/api/chat` 동작, (4) stream 종료 후 입력창 즉시 활성화 확인 (2026-05-10). |
+| M6 | [x] **면접 조기 종료 — Must-fallback 미니멈** (F-29 묶음) | BE / FE / Feature | 좌측 레일 종료 alert 스텁이 그대로 노출되면 데모 중 깨짐 위험 → 최소 동작 안전망 확보. **S8(Should 본체)과 동일 PR로 묶어 처리** (TPM 결정). 범위: 종료 버튼 → 확인 모달 → `/api/interview/end` → Page 4 부분 리포트 OR Page 1 복귀 + Toast. **완료:** 2026-05-13 (BE+FE+디자인). |
+| M8 | **`max_questions` 의미 재정의 (옵션 A — 5문항=5답변=5평가)** | BE / DevTODO | `max_questions=5`인데 5턴 진행 시 evaluations가 4건만 누적 → 마지막 질문(Q5)에 답할 기회 없이 Page 4 이동. 옵션 A로 재정의: 5번째 답변까지 받고 평가 5건 누적 후 종료. 영향: `backend/agent.py`의 종료 조건(`should_continue`) + interviewer/evaluator 노드 순서. 가능하면 **M2(빈 답변 가드)와 동일 PR로 묶음**. 회귀 시나리오: 5턴 자연 종료 시 evaluations=5건 / F-29 조기 종료(`count_valid_evaluations`) 시 회귀 0. |
 
 ### 🟡 Should — 발표 전 가능하면
 
@@ -189,12 +191,16 @@
 | N4 | 백엔드 테스트 (pytest + 그래프 mock) | BE / DevTODO | 현재 0개. 회귀 방지. |
 | N5 | 로깅 개선 (`print` → `logging`, thread_id 추적) | BE / DevTODO | 운영 단계 작업. |
 | N6 | 답변 제한 시간 타이머 | FE / Feature | 핵심 가치 "긴장감" 보강. 줄어드는 게이지 + 초과 시 턴 종료. |
+| N7 | **조기 종료 횟수 텔레메트리** (F-29 후속) | BE / DevTODO | 현재 한 줄 `print`만 추가됨 (advisor [Low] 지적). 운영 단계에서 `logging` 기반 구조화 + thread_id별 종료 사유/턴수 집계 필요. 데모 후 N5 로깅 개선과 묶어 처리. |
+| N8 | **Page 1 복귀 시 안내 배너** (F-29 후속) | FE / Feature | 디자이너가 v1에서 도입 안 함 결정 (Toast로 충분 + 노이즈 회피). 실사용 데이터 보고 "복귀 후 사용자 혼란" 시그널 있으면 재검토. 현재 상태 유지. |
+| M7 | **Page 4 Q1 미리보기 BE root cause 재진단** | BE / FE / DevTODO | Page 4 Q1 미리보기가 빈 채로 표시되던 버그. FE fallback `normalizeEvaluations`로 우회되어 사용자 영향 0이나 BE root cause는 BE/FE curl 검증 결과 모순으로 미규명. 데모 후 **N4(pytest) 도입과 묶어 5턴 시나리오로 재진단**. FE fallback은 defense-in-depth로 유지. 관련 파일: `backend/agent.py:162-185` evaluator_node, `frontend/src/App.jsx`의 `normalizeEvaluations`. |
 
 ### 🟡 Should — 발표 전 가능하면 (계속)
 
 | # | 항목 | 분류 | 근거 |
 |---|------|------|------|
 | S7 | **디버그 모드 — 샘플 이력서 빠른 진입** (Phase 7) | FE / DX | 개발 검증·데모 효율화. PDF 업로드/분석 과정 스킵 → mock 데이터로 Page 2 직진. |
+| S8 | [x] **면접 조기 종료 — Should 본체** (F-29 사용자 가치) | BE / FE / Feature | 5턴 완주 어려운 사용자(시간/맥락 이슈)에게 부분 결과라도 회수해 학습 가치 보전. **정책:** 옵션 C (≥3 답변 → 부분 리포트 + 배지/disclaimer, <3 → 폐기 + Toast), 확인 모달 필수. **M6(Must-fallback)와 동일 PR 묶음** (TPM 결정). **완료:** 2026-05-13 — 사양서 / BE `/api/interview/end` + state 확장 + lock / FE `EarlyEndModal` + AbortController + Page 4 분기. 자세한 내용 F-29 참조. |
 
 ---
 
@@ -263,6 +269,46 @@
 
 **잔여**
 - [~] 디자이너 사양서 ↔ FE v0 구현 시각 갭 패치 (버튼 28×28 정사각형, radius 8px, 로딩 이중 피드백, 드롭업 헤더) 🔄 (세션: UI-F28-patch, since: 2026-05-10 09:00)
+
+---
+
+### F-29. 면접 조기 종료 (Early Termination) [구현 완료, 라이브 검증 대기]
+**왜**: 면접 도중 사용자가 시간/맥락 이슈로 5턴 완주가 어려운 상황 발생. 강제 페이지 이탈로 인한 학습 손실 방지 + 부분 결과라도 회수해 학습 가치 보전.
+
+**정책 (TPM 결정 — 옵션 C 절충)**
+- 임계 `N=3` 답변 이상: 부분 리포트 생성 → Page 4 (조기 종료 배지 + disclaimer)
+- 임계 미만 (0~2 답변): 폐기 후 Page 1 복귀 + Toast 안내
+- 실수 클릭 방지: **확인 모달 필수**
+- 점수 산출: 참여 문항만 평가 (disclaimer로 신뢰도 명시)
+
+**시퀀스**
+```
+[× 면접 조기 종료] (좌측 레일 진행도 하단)
+  → 확인 모달 (answered_count로 카피 분기)
+  → [그래도 종료]
+    → composer disable + loading
+    → POST /api/interview/end
+    → Case A (≥3): Page 4 + "조기 종료 N/5" 배지 + disclaimer
+    → Case B (<3): Toast + Page 1 복귀
+```
+
+**UI 사양서**
+`design/assets/redesign/F29-early-termination-spec.md` (디자이너 산출 완료).
+
+**우선순위 묶음 (TPM 결정)**
+- **Should-S8** (사용자 가치 본체) + **Must-fallback** (alert 스텁 깨짐 방지 미니멈) 동일 PR로 묶어 데모 안전망 확보
+- Must 표의 `M6` 참조 (단일 PR 범위)
+
+**구현 결정 (PM/TPM 합의)**
+- 백엔드: 새 엔드포인트 `POST /api/interview/end` (LangGraph state 재진입 X, 별도 routing) — `report_node` 부분 리포트 분기 + `count_valid_evaluations` + `asyncio.Lock`으로 race condition 방지
+- 프론트: 모달 dismiss 라우팅 (Esc / Backdrop / Tab loop / 초기 포커스 Secondary), Toast `severity='warning'` 신설, `AbortController`로 스트리밍 중 종료 시 token fetch abort
+- 텔레메트리: 현재 한 줄 `print` 수준 (advisor [Low] 지적 → Nice 백로그 N7로 이관)
+
+**잔여**
+- [x] 디자이너 사양서 v1 (확인 모달 + 배지 + Toast + v0 마이그레이션 노트)
+- [x] 백엔드: `POST /api/interview/end` + `is_partial`/`answered_count`/`disclaimer` 필드 + `asyncio.Lock` + `count_valid_evaluations` + `report_node` 부분 리포트 분기
+- [x] 프론트: 종료 버튼 + `EarlyEndModal` + `App.jsx` onAbort 실배선 + AbortController + Page 4 배지/disclaimer + Toast warning severity
+- [ ] 라이브 검증 시나리오 (`todo.md` Phase 7.4 참조)
 
 ---
 

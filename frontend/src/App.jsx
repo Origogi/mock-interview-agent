@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import HomePage from './pages/HomePage.jsx';
 import SummaryPage from './pages/SummaryPage.jsx';
 import InterviewPage from './pages/InterviewPage.jsx';
@@ -6,7 +6,21 @@ import ReportPage from './pages/ReportPage.jsx';
 import TopBar from './components/TopBar.jsx';
 import PageTransition from './components/PageTransition.jsx';
 import Toast from './components/Toast.jsx';
+import EarlyEndModal from './components/EarlyEndModal.jsx';
 import { FIXTURE_SAMPLE_RESUME } from './debug/fixtures.js';
+
+// BE가 evaluations[0].question을 빈 문자열로 내려보내는 케이스가 있어,
+// 첫 번째 AI 메시지(첫 질문) 본문으로 복구한다. 나머지 인덱스는 BE 응답 그대로 사용.
+function normalizeEvaluations(rawEvaluations, messages) {
+  const list = Array.isArray(rawEvaluations) ? rawEvaluations : [];
+  if (list.length === 0) return list;
+  if (list[0]?.question) return list;
+  const firstAi = messages.find((m) => m.role === 'ai');
+  if (!firstAi?.content) return list;
+  const patched = list.slice();
+  patched[0] = { ...patched[0], question: firstAi.content };
+  return patched;
+}
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -26,6 +40,12 @@ function App() {
   const [isFetchingSample, setIsFetchingSample] = useState(false);
   const [threadId, setThreadId] = useState(null);
   const [finalReport, setFinalReport] = useState(null);
+
+  // F-29 Early Termination state
+  const [earlyEndOpen, setEarlyEndOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+  const [toastSeverity, setToastSeverity] = useState('info');
+  const streamAbortRef = useRef(null);
 
   useEffect(() => {
     const checkServer = async () => {
@@ -116,12 +136,17 @@ function App() {
     setChatInput('');
     setIsAiTyping(true);
 
+    // AbortController for early-termination support — onAbort can cancel mid-stream.
+    const controller = new AbortController();
+    streamAbortRef.current = controller;
+
     try {
       // 스트림 엔드포인트 시도
       const res = await fetch('http://localhost:8000/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ thread_id: threadId, user_answer: answer }),
+        signal: controller.signal,
       });
 
       if (!res.ok || !res.body) {
@@ -139,6 +164,7 @@ function App() {
       setMessages((prev) => [...prev, { role: 'ai', content: '' }]); // AI 메시지 준비
 
       while (true) {
+        if (controller.signal.aborted) break;
         const { done, value } = await reader.read();
         if (done) break;
 
@@ -175,7 +201,7 @@ function App() {
 
       // 최종 메시지 정확성을 위해 streamDoneData로 덮어씀
       if (streamDoneData) {
-        setEvaluations(streamDoneData.evaluations || []);
+        setEvaluations(normalizeEvaluations(streamDoneData.evaluations, messages));
         setCurrentQuestionCount(streamDoneData.question_count);
         if (streamDoneData.is_finished) {
           setFinalReport(streamDoneData.final_report);
@@ -193,6 +219,12 @@ function App() {
         });
       }
     } catch (streamErr) {
+      // Aborted (early-termination) — caller handles cleanup, skip fallback.
+      if (controller.signal.aborted || streamErr?.name === 'AbortError') {
+        setIsAiTyping(false);
+        return;
+      }
+
       // 폴백: 동기 `/api/chat` 호출
       console.warn('Stream failed, falling back to sync /api/chat:', streamErr);
       setIsAiTyping(true);
@@ -201,9 +233,10 @@ function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ thread_id: threadId, user_answer: answer }),
+          signal: controller.signal,
         });
         const data = await res.json();
-        setEvaluations(data.evaluations || []);
+        setEvaluations(normalizeEvaluations(data.evaluations, messages));
         setCurrentQuestionCount(data.question_count);
         if (data.is_finished) {
           setFinalReport(data.final_report);
@@ -212,10 +245,15 @@ function App() {
         } else {
           setMessages((prev) => [...prev, { role: 'ai', content: data.question }]);
         }
-      } catch {
+      } catch (fbErr) {
+        if (controller.signal.aborted || fbErr?.name === 'AbortError') return;
         setErrorMsg('서버 연결 오류: 답변 전송에 실패했습니다.');
       } finally {
         setIsAiTyping(false);
+      }
+    } finally {
+      if (streamAbortRef.current === controller) {
+        streamAbortRef.current = null;
       }
     }
   };
@@ -259,6 +297,95 @@ function App() {
     setIsMockSession(false);
   };
 
+  // F-29 Early Termination: Step 1 — open modal (no API yet)
+  const handleEarlyEndOpen = () => {
+    if (earlyEndOpen) return;
+    setEarlyEndOpen(true);
+  };
+
+  // F-29: Step 2 — user dismissed via Esc / backdrop / "계속 면접보기"
+  const handleEarlyEndCancel = () => {
+    setEarlyEndOpen(false);
+  };
+
+  // F-29: Step 3 — Primary CTA confirmed.
+  // Abort in-flight stream → POST /api/interview/end → branch on response.
+  const handleEarlyEndConfirm = async () => {
+    if (!threadId) {
+      setEarlyEndOpen(false);
+      return;
+    }
+
+    // Abort any in-flight stream so BE lock can release; ignore if none.
+    if (streamAbortRef.current) {
+      try {
+        streamAbortRef.current.abort();
+      } catch {
+        /* noop */
+      }
+      streamAbortRef.current = null;
+    }
+    setIsAiTyping(false);
+
+    try {
+      const res = await fetch('http://localhost:8000/api/interview/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ thread_id: threadId }),
+      });
+
+      // 409 — already naturally finished. Use existing finalReport if available.
+      if (res.status === 409) {
+        setEarlyEndOpen(false);
+        setToastSeverity('info');
+        setToastMsg('이미 면접이 종료되었어요. 결과 리포트로 이동합니다.');
+        if (finalReport) {
+          setCurrentPage('report');
+        }
+        return;
+      }
+
+      if (!res.ok) {
+        // 404 or other — surface error toast, close modal.
+        setEarlyEndOpen(false);
+        setToastSeverity('error');
+        setToastMsg('면접 종료에 실패했어요. 잠시 후 다시 시도해 주세요.');
+        return;
+      }
+
+      const data = await res.json();
+
+      // Case A — partial report available.
+      if (data.final_report) {
+        setFinalReport(data.final_report);
+        if (Array.isArray(data.evaluations)) {
+          setEvaluations(normalizeEvaluations(data.evaluations, messages));
+        }
+        setEarlyEndOpen(false);
+        // Immediate transition — composer is already locked, no setTimeout race.
+        setCurrentPage('report');
+        return;
+      }
+
+      // Case B — discarded, return to Page 1 with warning toast.
+      const answeredCount = data.answered_count ?? 0;
+      setEarlyEndOpen(false);
+      handleRestartOrClearMock();
+      setToastSeverity('warning');
+      setToastMsg(
+        data.message ||
+          (answeredCount > 0
+            ? `답변(${answeredCount}개)이 부족해 리포트를 만들지 못했어요. 다시 시도해 주세요.`
+            : '답변이 부족해 리포트를 만들지 못했어요. 다시 시도해 주세요.')
+      );
+    } catch (err) {
+      console.warn('Early-end request failed:', err);
+      setEarlyEndOpen(false);
+      setToastSeverity('error');
+      setToastMsg('네트워크 오류로 면접 종료에 실패했어요. 다시 시도해 주세요.');
+    }
+  };
+
   return (
     <div className="app">
       <TopBar currentPage={currentPage} serverStatus={serverStatus} />
@@ -287,7 +414,7 @@ function App() {
               isFetchingSample={isFetchingSample}
               onSend={sendAnswer}
               onFillSampleAnswer={handleFillSampleAnswer}
-              onAbort={() => alert('면접 조기 종료 및 결과 보기 (Page 4 이동)')}
+              onAbort={handleEarlyEndOpen}
             />
           )}
           {currentPage === 'report' && (
@@ -306,6 +433,23 @@ function App() {
         severity="error"
         duration={6000}
         onClose={() => setErrorMsg('')}
+      />
+
+      <Toast
+        open={!!toastMsg}
+        message={toastMsg}
+        severity={toastSeverity}
+        duration={5000}
+        onClose={() => setToastMsg('')}
+      />
+
+      <EarlyEndModal
+        open={earlyEndOpen}
+        answeredCount={evaluations.length}
+        maxQuestions={maxQuestions}
+        threshold={3}
+        onConfirm={handleEarlyEndConfirm}
+        onCancel={handleEarlyEndCancel}
       />
     </div>
   );

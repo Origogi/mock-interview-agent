@@ -4,6 +4,7 @@ const SEVERITY_COLOR = {
   error: '#ff6b6b',
   success: '#4ade80',
   info: '#6e74ff',
+  warning: '#ffb86b',
 };
 
 export default function Toast({

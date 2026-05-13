@@ -14,6 +14,10 @@ const KPI_DEFS = [
 export default function ReportPage({ report, evaluations = [], onRestart, accent = ACCENT }) {
   const scores = report?.scores || {};
   const feedback = report?.feedback || {};
+  const isPartial = report?.is_partial === true;
+  const answeredCount = report?.answered_count ?? evaluations.length;
+  const maxQuestions = report?.max_questions ?? 5;
+  const disclaimer = report?.disclaimer || '';
 
   // 종합 점수 계산: 4개 KPI 산술평균
   const avgScore = Math.round(
@@ -24,15 +28,27 @@ export default function ReportPage({ report, evaluations = [], onRestart, accent
     <div className="screen report report-host" data-screen-label="04 Report">
       <div className="report-wrap">
         <header className="report-head">
-          <div className="eyebrow">
-            <span className="dot" style={{ background: accent }} />
-            면접 결과 리포트
+          <div className="eyebrow-row">
+            <div className="eyebrow">
+              <span className="dot" style={{ background: accent }} />
+              면접 결과 리포트
+            </div>
+            {isPartial && (
+              <span className="report-partial-badge">
+                조기 종료 · {answeredCount}/{maxQuestions} 문항
+              </span>
+            )}
           </div>
           <h1 className="report-title">고생하셨습니다</h1>
           <p className="report-sub">지원자님의 역량 분석 결과입니다.</p>
         </header>
 
-        <HeroScore finalScore={avgScore} accent={accent} />
+        <div className="hero-score-group">
+          <HeroScore finalScore={avgScore} accent={accent} />
+          {isPartial && disclaimer && (
+            <p className="report-disclaimer">{disclaimer}</p>
+          )}
+        </div>
 
         <section className="kpi-row">
           {KPI_DEFS.map((kpi, i) => (

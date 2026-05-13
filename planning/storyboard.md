@@ -97,7 +97,7 @@
 **인터랙션**
 - Page 3 진입 시 첫 질문이 토큰 단위 fade-in
 - 약속된 횟수(5회) 답변 종료 시 "면접이 모두 완료되었습니다…" 후 Page 4로 자동 라우팅
-- "조기 종료" 버튼은 현재 placeholder (alert), Page 4 즉시 전환은 향후 과제
+- **면접 조기 종료 (F-29):** 좌측 레일의 조기 종료 버튼 클릭 → 확인 모달(질문 N개 기준 리포트 생성 안내) → 승인 시 부분 응답으로 Page 4 리포트 즉시 생성·전환
 
 ## 📱 Page 4: Report (최종 결과) [v1 기반, Phase 5 잔여]
 > 💡 **UI 와이어프레임:** `../design/assets/wireframe/wireframe_page4.png`
