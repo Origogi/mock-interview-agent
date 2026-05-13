@@ -6,6 +6,43 @@ const ACCENT = '#6e74ff';
 const TOAST_MS = 2600;
 const USER_PIN_TOP_OFFSET = 72;
 
+const SCORE_TIERS = [
+  {
+    id: 'best',
+    min: 7,
+    color: 'accent',
+    toastCopy: '단단한 답변이었습니다',
+    avatar: '😌',
+  },
+  {
+    id: 'good',
+    min: 5,
+    color: '#facc15',
+    toastCopy: '방향은 좋지만 보완이 필요합니다',
+    avatar: '🤔',
+  },
+  {
+    id: 'bad',
+    min: 1,
+    color: '#ff6b6b',
+    toastCopy: '핵심 보강이 필요합니다',
+    avatar: '😐',
+  },
+];
+
+function getScoreTier(score, accent = ACCENT) {
+  const numericScore = Number(score);
+  const fallbackTier = SCORE_TIERS[SCORE_TIERS.length - 1];
+  const tier = Number.isFinite(numericScore)
+    ? SCORE_TIERS.find(({ min }) => numericScore >= min) ?? fallbackTier
+    : fallbackTier;
+
+  return {
+    ...tier,
+    color: tier.color === 'accent' ? accent : tier.color,
+  };
+}
+
 export default function InterviewPage({
   messages,
   evaluations,
@@ -318,7 +355,10 @@ export default function InterviewPage({
   }, [latestEval]);
 
   const lastScore = evaluations.length ? evaluations[evaluations.length - 1].score : null;
-  const reactionEmoji = lastScore == null ? '🤔' : lastScore >= 8 ? '😌' : lastScore >= 6 ? '🤔' : '😐';
+  const lastTier = lastScore == null ? null : getScoreTier(lastScore, accent);
+  const reactionEmoji = lastTier?.avatar ?? '🤔';
+  const avatarAccent = lastTier?.color ?? accent;
+  const latestEvalTier = latestEval ? getScoreTier(latestEval.score, accent) : null;
 
   const isStreamRevealing =
     streaming.mode === 'stream' && (!streaming.isDone || streaming.revealed < streaming.tokens.length);
@@ -397,11 +437,11 @@ export default function InterviewPage({
 
           <div className="iv-side-profile">
             <div
-              className={`iv-avatar ${busy ? 'is-busy' : ''}`}
-              style={{ borderColor: accent }}
+              className={`iv-avatar ${lastTier ? `is-${lastTier.id}` : ''} ${busy ? 'is-busy' : ''}`}
+              style={{ borderColor: avatarAccent }}
             >
               <span className="iv-avatar-emoji">{reactionEmoji}</span>
-              {busy && <span className="iv-avatar-pulse" style={{ borderColor: accent }} />}
+              {busy && <span className="iv-avatar-pulse" style={{ borderColor: avatarAccent }} />}
             </div>
             <div className="iv-side-profile-copy">
               <div className="iv-int-name">시니어 엔지니어 면접관</div>
@@ -454,10 +494,10 @@ export default function InterviewPage({
       </aside>
 
       <main className="iv-stage">
-        {latestEval && (
+        {latestEval && latestEvalTier && (
           <div
-            className="eval-toast"
-            style={{ '--toast-accent': latestEval.score >= 7 ? accent : '#ff6b6b' }}
+            className={`eval-toast is-${latestEvalTier.id}`}
+            style={{ '--toast-accent': latestEvalTier.color }}
           >
             <div className="eval-toast-num">
               {latestEval.score}
@@ -465,9 +505,7 @@ export default function InterviewPage({
             </div>
             <div className="eval-toast-text">
               <div className="eval-toast-h">Q{latestEval.idx + 1} 평가 완료</div>
-              <div className="eval-toast-d">
-                {latestEval.score >= 7 ? '단단한 답변이었습니다' : '조금 아쉬운 답변이었습니다'}
-              </div>
+              <div className="eval-toast-d">{latestEvalTier.toastCopy}</div>
             </div>
           </div>
         )}
@@ -587,7 +625,7 @@ function TypingStatus({ accent }) {
 
 function EvalCard({ idx, ev, accent, fresh }) {
   const [open, setOpen] = useState(false);
-  const isHigh = ev.score >= 7;
+  const tier = getScoreTier(ev.score, accent);
   const question = ev.question || ev.q || '';
   const feedback = ev.feedback || '';
   return (
@@ -596,8 +634,8 @@ function EvalCard({ idx, ev, accent, fresh }) {
         <span className="iv-eval-num">Q{idx + 1}</span>
         <span className="iv-eval-q">{question.slice(0, 32)}…</span>
         <span
-          className={`iv-score ${isHigh ? 'high' : 'low'}`}
-          style={{ color: isHigh ? accent : '#ff6b6b' }}
+          className={`iv-score ${tier.id}`}
+          style={{ '--score-color': tier.color }}
         >
           {ev.score}
           <small>/10</small>

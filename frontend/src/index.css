@@ -661,14 +661,29 @@
 .iv-eval-row {
   width: 100%; padding: 12px 14px;
   background: none; border: none; cursor: pointer;
-  display: grid; grid-template-columns: auto 1fr auto;
+  display: grid; grid-template-columns: auto 1fr auto auto;
   align-items: center; gap: 10px; text-align: left;
   color: var(--fg);
 }
 .iv-eval-num { font-family: var(--font-mono); font-size: 11px; color: var(--fg-dim); }
 .iv-eval-q { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.iv-score { font-family: var(--font-display); font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
-.iv-score small { font-size: 11px; color: var(--fg-dim); margin-left: 1px; font-weight: 500; }
+.iv-score {
+  min-width: 52px; height: 28px; padding: 0 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid color-mix(in oklch, var(--score-color) 34%, transparent);
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--score-color) 14%, transparent);
+  color: var(--score-color);
+  font-family: var(--font-display); font-size: 17px; font-weight: 600;
+  line-height: 1; letter-spacing: 0;
+}
+.iv-score small {
+  font-size: 11px;
+  color: color-mix(in oklch, var(--score-color) 52%, var(--fg-dim));
+  margin-left: 1px;
+  font-weight: 500;
+  line-height: 1;
+}
 .iv-eval-detail-wrap {
   display: grid;
   grid-template-rows: 0fr;
@@ -846,7 +861,9 @@
   position: absolute; top: 88px; right: 32px; z-index: 5;
   display: flex; align-items: center; gap: 14px;
   padding: 12px 18px;
-  background: var(--surface);
+  background:
+    linear-gradient(90deg, color-mix(in oklch, var(--toast-accent) 12%, transparent), transparent 42%),
+    var(--surface);
   border: 1px solid var(--border);
   border-left: 3px solid var(--toast-accent);
   border-radius: 14px;

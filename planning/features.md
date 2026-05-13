@@ -202,7 +202,7 @@
 |---|------|------|------|
 | S7 | **디버그 모드 — 샘플 이력서 빠른 진입** (Phase 7) | FE / DX | 개발 검증·데모 효율화. PDF 업로드/분석 과정 스킵 → mock 데이터로 Page 2 직진. |
 | S8 | [x] **면접 조기 종료 — Should 본체** (F-29 사용자 가치) | BE / FE / Feature | 5턴 완주 어려운 사용자(시간/맥락 이슈)에게 부분 결과라도 회수해 학습 가치 보전. **정책:** 옵션 C (≥3 답변 → 부분 리포트 + 배지/disclaimer, <3 → 폐기 + Toast), 확인 모달 필수. **M6(Must-fallback)와 동일 PR 묶음** (TPM 결정). **완료:** 2026-05-13 — 사양서 / BE `/api/interview/end` + state 확장 + lock / FE `EarlyEndModal` + AbortController + Page 4 분기. 자세한 내용 F-29 참조. |
-| S9 | **점수 3단계 UI 톤 통일** | FE / Design | canonical 기준을 Best 7~10 / Good 5~6 / Bad 1~4로 확정. Page 4 배지는 이미 `good/mid/low`에 가까움. Page 3 토스트·평가 카드·아바타 반응은 현재 일부 binary/다른 threshold라 후속으로 3단계 copy/color/helper 통일 필요. 샘플 답변 티어 데모 품질에 직접 영향이 있어 Should로 승격. |
+| S9 | [x] **점수 3단계 UI 톤 통일** | FE / Design | canonical 기준을 Best 7~10 / Good 5~6 / Bad 1~4로 확정. Page 3 토스트·평가 카드·아바타 반응의 threshold/helper/copy/color를 3단계로 통일 완료. 샘플 답변 티어 데모 품질에 직접 영향이 있어 Should로 승격. |
 
 ---
 
