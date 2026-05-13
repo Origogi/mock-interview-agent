@@ -159,6 +159,6 @@ TPM 요청이 1개 도메인만 건드리면 (예: BE 단독 마이그레이션,
 
 ## 핵심 참조 문서
 - `AGENTS.md` "오케스트레이션 원칙" — 안티 패턴과 메타 화이트리스트
-- `.Codex/agents/main-orchestrator.md` — 라우팅 규칙
-- `.Codex/agents/product-manager.md` — PM 페르소나·기획 문서 위치
+- `.codex/agents/main-orchestrator.toml` — 라우팅 규칙
+- `.codex/agents/product-manager.toml` — PM 페르소나·기획 문서 위치
 - `planning/features.md`, `planning/todo.md` — 백로그 SSOT
