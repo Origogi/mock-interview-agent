@@ -7,9 +7,14 @@ import TopBar from './components/TopBar.jsx';
 import PageTransition from './components/PageTransition.jsx';
 import Toast from './components/Toast.jsx';
 import EarlyEndModal from './components/EarlyEndModal.jsx';
+import RewindConfirmModal from './components/RewindConfirmModal.jsx';
+import TimeMachineOverlay from './components/TimeMachineOverlay.jsx';
 import { FIXTURE_SAMPLE_RESUME } from './debug/fixtures.js';
 
-const REPORT_TRANSITION_DELAY_MS = 3000;
+const REPORT_TRANSITION_DELAY_MS = 1000;
+const TIME_MACHINE_PAGE_SETTLE_MS = 420;
+const TIME_MACHINE_DONE_HOLD_MS = 1000;
+const TIME_MACHINE_REVEAL_MS = 360;
 const DEFAULT_CLOSING_MESSAGE =
   '좋습니다. 여기까지 5개 질문에 대한 답변을 모두 확인했습니다. 이제 전체 답변을 바탕으로 최종 리포트를 정리하겠습니다.';
 
@@ -24,6 +29,41 @@ function normalizeEvaluations(rawEvaluations, messages) {
   const patched = list.slice();
   patched[0] = { ...patched[0], question: firstAi.content };
   return patched;
+}
+
+function normalizeChatMessages(rawMessages) {
+  if (!Array.isArray(rawMessages)) return [];
+
+  return rawMessages
+    .map((message) => {
+      const rawRole = message?.role || message?.type || '';
+      const role =
+        rawRole === 'human' || rawRole === 'user'
+          ? 'user'
+          : rawRole === 'assistant' || rawRole === 'ai'
+          ? 'ai'
+          : rawRole;
+
+      if (role !== 'ai' && role !== 'user') return null;
+
+      const rawContent = message?.content;
+      const content = Array.isArray(rawContent)
+        ? rawContent
+            .map((part) => (typeof part === 'string' ? part : part?.text || ''))
+            .join('')
+        : String(rawContent ?? '');
+
+      return {
+        role,
+        content,
+        ...(role === 'ai' ? { streamDone: true } : {}),
+      };
+    })
+    .filter(Boolean);
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function App() {
@@ -50,6 +90,12 @@ function App() {
   const [earlyEndOpen, setEarlyEndOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [toastSeverity, setToastSeverity] = useState('info');
+  const [rewindRequest, setRewindRequest] = useState(null);
+  const [timeMachine, setTimeMachine] = useState({
+    open: false,
+    phase: 'running',
+    questionNumber: null,
+  });
   const streamAbortRef = useRef(null);
   const reportTransitionRef = useRef(null);
 
@@ -443,11 +489,111 @@ function App() {
     }
   };
 
+  const handleRewindRequest = ({ questionIndex, source }) => {
+    const targetIndex = Number(questionIndex);
+    if (!threadId || !Number.isInteger(targetIndex)) return;
+    if (isAiTyping || isClosingInterview || earlyEndOpen || rewindRequest || timeMachine.open) return;
+
+    setRewindRequest({
+      questionIndex: targetIndex,
+      questionNumber: targetIndex + 1,
+      source,
+    });
+  };
+
+  const handleRewindCancel = () => {
+    setRewindRequest(null);
+  };
+
+  const handleRewindConfirm = async () => {
+    if (!rewindRequest || !threadId) return;
+
+    const request = rewindRequest;
+    setRewindRequest(null);
+    clearReportTransition();
+
+    if (streamAbortRef.current) {
+      try {
+        streamAbortRef.current.abort();
+      } catch {
+        /* noop */
+      }
+      streamAbortRef.current = null;
+    }
+
+    setIsAiTyping(false);
+    setIsFetchingSample(false);
+    setIsClosingInterview(false);
+    setTimeMachine({
+      open: true,
+      phase: 'running',
+      questionNumber: request.questionNumber,
+    });
+
+    try {
+      const res = await fetch('http://localhost:8000/api/interview/rewind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          thread_id: threadId,
+          target_question_index: request.questionNumber,
+          source: request.source,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.detail || '되감기 요청에 실패했어요. 잠시 후 다시 시도해 주세요.');
+      }
+
+      const normalizedMessages = normalizeChatMessages(data.messages);
+      const normalizedEvaluations = normalizeEvaluations(data.evaluations, normalizedMessages);
+      const nextQuestionCount = Number(data.question_count);
+
+      setMessages(normalizedMessages);
+      setEvaluations(normalizedEvaluations);
+      setCurrentQuestionCount(
+        Number.isFinite(nextQuestionCount) ? nextQuestionCount : request.questionNumber
+      );
+      setChatInput('');
+      setFinalReport(null);
+      setIsClosingInterview(false);
+      setEarlyEndOpen(false);
+      setCurrentPage('interview');
+
+      await wait(TIME_MACHINE_PAGE_SETTLE_MS);
+      setTimeMachine((prev) => ({
+        ...prev,
+        phase: 'done',
+      }));
+      await wait(TIME_MACHINE_DONE_HOLD_MS);
+      setTimeMachine((prev) => ({
+        ...prev,
+        phase: 'revealing',
+      }));
+      await wait(TIME_MACHINE_REVEAL_MS);
+      setTimeMachine({
+        open: false,
+        phase: 'running',
+        questionNumber: null,
+      });
+    } catch (err) {
+      console.warn('Rewind request failed:', err);
+      setTimeMachine({
+        open: false,
+        phase: 'running',
+        questionNumber: null,
+      });
+      setToastSeverity('error');
+      setToastMsg(err?.message || '되감기 요청에 실패했어요. 잠시 후 다시 시도해 주세요.');
+    }
+  };
+
   return (
     <div className="app">
       <TopBar currentPage={currentPage} serverStatus={serverStatus} />
 
-      <div className="viewport">
+      <div className={`viewport${timeMachine.open ? ' is-time-machine-covered' : ''}`}>
         <PageTransition pageKey={currentPage}>
           {currentPage === 'home' && (
             <HomePage onSubmit={handleUpload} onError={setErrorMsg} onSelectSampleResume={handleSelectSampleResume} onClearMock={handleClearMock} isUploading={isUploading} />
@@ -473,6 +619,8 @@ function App() {
               onSend={sendAnswer}
               onFillSampleAnswer={handleFillSampleAnswer}
               onAbort={handleEarlyEndOpen}
+              onRewindRequest={handleRewindRequest}
+              rewindDisabled={earlyEndOpen || !!rewindRequest || timeMachine.open}
             />
           )}
           {currentPage === 'report' && (
@@ -480,6 +628,8 @@ function App() {
               report={finalReport}
               evaluations={evaluations}
               onRestart={handleRestartOrClearMock}
+              onRewindRequest={handleRewindRequest}
+              rewindDisabled={!threadId || !!rewindRequest || timeMachine.open}
             />
           )}
         </PageTransition>
@@ -508,6 +658,19 @@ function App() {
         threshold={3}
         onConfirm={handleEarlyEndConfirm}
         onCancel={handleEarlyEndCancel}
+      />
+
+      <RewindConfirmModal
+        open={!!rewindRequest}
+        questionNumber={rewindRequest?.questionNumber ?? 1}
+        onConfirm={handleRewindConfirm}
+        onCancel={handleRewindCancel}
+      />
+
+      <TimeMachineOverlay
+        open={timeMachine.open}
+        phase={timeMachine.phase}
+        questionNumber={timeMachine.questionNumber ?? 1}
       />
     </div>
   );

@@ -19,7 +19,8 @@ from agent import (
 )
 from langgraph.types import Command
 from tools import generate_sample_answer
-from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
+from langgraph.graph.message import REMOVE_ALL_MESSAGES
+from langchain_core.messages import SystemMessage, AIMessage, HumanMessage, RemoveMessage
 
 load_dotenv() # Load variables from .env
 
@@ -61,6 +62,94 @@ async def _get_thread_lock(thread_id: str) -> asyncio.Lock:
             lock = asyncio.Lock()
             _thread_locks[thread_id] = lock
         return lock
+
+
+def _message_role(message: object) -> str:
+    """LangChain message/dict를 FE가 쓰는 role 값으로 정규화."""
+    if isinstance(message, AIMessage):
+        return "ai"
+    if isinstance(message, HumanMessage):
+        return "user"
+    if isinstance(message, dict):
+        raw_role = message.get("role") or message.get("type") or ""
+    else:
+        raw_role = type(message).__name__
+
+    role = str(raw_role).lower()
+    if role in {"ai", "assistant", "aimessage"}:
+        return "ai"
+    if role in {"human", "user", "humanmessage"}:
+        return "user"
+    if role == "system" or role == "systemmessage":
+        return "system"
+    return role
+
+
+def _message_content(message: object) -> str:
+    if isinstance(message, dict):
+        content = message.get("content", "")
+    else:
+        content = getattr(message, "content", "")
+
+    if isinstance(content, list):
+        return "".join(
+            part if isinstance(part, str) else str(part.get("text", ""))
+            for part in content
+        )
+    return str(content or "")
+
+
+def _normalize_messages(messages: list) -> List[Dict[str, str]]:
+    normalized = []
+    for message in messages or []:
+        role = _message_role(message)
+        if role not in {"ai", "user"}:
+            continue
+        normalized.append({"role": role, "content": _message_content(message)})
+    return normalized
+
+
+def _replace_messages_update(messages: list) -> list:
+    """MessagesState(add_messages)에서 전체 messages를 안전하게 교체한다."""
+    return [RemoveMessage(id=REMOVE_ALL_MESSAGES, content=""), *(messages or [])]
+
+
+def _is_discarded_report(final_report: object) -> bool:
+    return isinstance(final_report, dict) and final_report.get("discarded") is True
+
+
+def _snapshot_interrupt_question(snapshot: object) -> Optional[str]:
+    """Interrupted graph snapshot에만 남아 있는 질문 텍스트를 추출한다."""
+    for task in getattr(snapshot, "tasks", []) or []:
+        for interrupt in getattr(task, "interrupts", []) or []:
+            value = getattr(interrupt, "value", None)
+            if value:
+                return str(value)
+    return None
+
+
+def _find_rewind_snapshot(history: list, target_question_index: int):
+    """Qn 답변 전 snapshot: Qn 질문이 마지막 AI 메시지이고 평가는 Q1~Q(n-1)만 존재."""
+    for snapshot in history:
+        values = snapshot.values or {}
+        messages = values.get("messages", []) or []
+        evaluations = values.get("evaluations", []) or []
+
+        if len(evaluations) != target_question_index - 1:
+            continue
+        if values.get("final_report") is not None:
+            continue
+
+        if values.get("question_count") == target_question_index:
+            if messages and _message_role(messages[-1]) == "ai":
+                return snapshot
+
+        # Legacy `/api/chat` sessions exposed the first question only as an
+        # interrupt value, so Q1 may not exist in `messages`. Keep those
+        # already-running demos rewindable by accepting the interrupt snapshot.
+        if target_question_index == 1 and _snapshot_interrupt_question(snapshot):
+            return snapshot
+    return None
 
 @app.get("/", response_model=HealthCheck)
 def read_root():
@@ -134,9 +223,26 @@ async def chat(request: ChatRequest):
 
     if interrupts:
         # 면접 진행 중: 다음 질문 반환
+        question = interrupts[0].value
+
+        # `/api/chat` 첫 질문은 LangGraph interrupt 값으로만 노출되고
+        # node return이 아직 커밋되지 않아 messages에 남지 않는다.
+        # 타임머신은 "Qn 답변 전" checkpoint가 필요하므로, 첫 질문도
+        # 스트리밍 플로우와 동일하게 명시적으로 checkpoint에 저장한다.
+        if request.user_answer is None and not current_values.get("messages"):
+            graph.update_state(
+                config,
+                {
+                    "messages": [AIMessage(content=question)],
+                    "question_count": 1,
+                },
+            )
+            state = graph.get_state(config)
+            current_values = state.values
+
         return {
-            "question": interrupts[0].value,
-            "question_count": current_values.get("question_count", 0) + 1,
+            "question": question,
+            "question_count": current_values.get("question_count", 1),
             "evaluations": current_values.get("evaluations", []),
             "is_finished": False,
             "final_report": None,
@@ -240,7 +346,7 @@ async def chat_stream_generator(request: ChatRequest) -> AsyncGenerator[str, Non
                 eval_result = evaluator_node(state_for_eval)
 
                 current_evaluations = current_values.get("evaluations", [])
-                next_evaluations = current_evaluations + eval_result.get("evaluations", [])
+                next_evaluations = eval_result.get("evaluations", current_evaluations)
                 question_count = current_values.get("question_count", 0)
                 max_questions = current_values.get("max_questions", 5)
                 is_finished = len(next_evaluations) >= max_questions
@@ -256,7 +362,7 @@ async def chat_stream_generator(request: ChatRequest) -> AsyncGenerator[str, Non
                         config,
                         {
                             "messages": [answer_message],
-                            "evaluations": eval_result.get("evaluations", []),
+                            "evaluations": next_evaluations,
                             "answered_count": len(next_evaluations),
                             "final_report": report_result["final_report"],
                         },
@@ -283,7 +389,7 @@ async def chat_stream_generator(request: ChatRequest) -> AsyncGenerator[str, Non
                         config,
                         {
                             "messages": [answer_message, AIMessage(content=question_text)],
-                            "evaluations": eval_result.get("evaluations", []),
+                            "evaluations": next_evaluations,
                             "question_count": question_count + 1,
                         },
                     )
@@ -452,6 +558,105 @@ async def end_interview(request: InterviewEndRequest):
             "max_questions": max_questions,
             "final_report": final_report,
             "evaluations": evaluations,
+        }
+
+
+class InterviewRewindRequest(BaseModel):
+    thread_id: str
+    target_question_index: int
+    source: str
+
+
+@app.post("/api/interview/rewind")
+async def rewind_interview(request: InterviewRewindRequest):
+    """
+    질문 답변 전 checkpoint로 파괴적 되감기한다 (F-30 B-Lite).
+
+    FE는 checkpoint_id를 몰라도 된다. BE가 thread history에서
+    `question_count == target_question_index`,
+    `len(evaluations) == target_question_index - 1`,
+    마지막 메시지가 AI 질문인 snapshot을 찾아 현재 상태를 그 값으로 복원한다.
+    """
+    thread_id = request.thread_id
+    target = request.target_question_index
+
+    if request.source not in {"page3", "page4"}:
+        raise HTTPException(status_code=400, detail="source는 page3 또는 page4여야 합니다.")
+    if target < 1:
+        raise HTTPException(status_code=400, detail="target_question_index는 1 이상이어야 합니다.")
+
+    config = {"configurable": {"thread_id": thread_id}}
+    state = graph.get_state(config)
+    if not state.values:
+        raise HTTPException(status_code=404, detail="해당 thread_id의 면접 세션을 찾을 수 없습니다.")
+
+    thread_lock = await _get_thread_lock(thread_id)
+    if thread_lock.locked():
+        raise HTTPException(status_code=409, detail="해당 면접 세션이 처리 중입니다. 잠시 후 다시 시도하세요.")
+
+    async with thread_lock:
+        state = graph.get_state(config)
+        current_values = state.values
+
+        if not current_values:
+            raise HTTPException(status_code=404, detail="해당 thread_id의 면접 세션을 찾을 수 없습니다.")
+
+        if _is_discarded_report(current_values.get("final_report")):
+            raise HTTPException(status_code=409, detail="폐기된 조기 종료 세션은 되감을 수 없습니다.")
+
+        current_evaluations = current_values.get("evaluations", []) or []
+        answered_count = len(current_evaluations)
+        if target > answered_count:
+            raise HTTPException(status_code=400, detail="이미 답변한 질문만 되감을 수 있습니다.")
+
+        history = list(graph.get_state_history(config))
+        snapshot = _find_rewind_snapshot(history, target)
+        if snapshot is None:
+            raise HTTPException(status_code=409, detail="해당 질문의 답변 전 checkpoint를 찾을 수 없습니다.")
+
+        snapshot_values = dict(snapshot.values or {})
+        restored_messages = snapshot_values.get("messages", []) or []
+        if not restored_messages:
+            interrupt_question = _snapshot_interrupt_question(snapshot)
+            if interrupt_question:
+                restored_messages = [AIMessage(content=interrupt_question)]
+        restored_evaluations = snapshot_values.get("evaluations", []) or []
+
+        restore_update = dict(snapshot_values)
+        restore_update["messages"] = _replace_messages_update(restored_messages)
+        restore_update["evaluations"] = restored_evaluations
+        restore_update["question_count"] = target
+        restore_update["max_questions"] = snapshot_values.get(
+            "max_questions",
+            current_values.get("max_questions", 5),
+        )
+        restore_update["final_report"] = None
+        restore_update["is_early_terminated"] = False
+        restore_update["answered_count"] = len(restored_evaluations)
+
+        graph.update_state(config, restore_update)
+
+        restored_state = graph.get_state(config)
+        restored_values = restored_state.values
+        response_messages = restored_values.get("messages", []) or []
+        question = _message_content(response_messages[-1]) if response_messages else None
+
+        print(
+            f"[rewind] thread_id={thread_id} target={target} "
+            f"kept_evaluations={len(restored_evaluations)} source={request.source}",
+            flush=True,
+        )
+
+        return {
+            "thread_id": thread_id,
+            "question": question,
+            "question_count": restored_values.get("question_count", target),
+            "max_questions": restored_values.get("max_questions", 5),
+            "messages": _normalize_messages(response_messages),
+            "evaluations": restored_values.get("evaluations", []),
+            "final_report": None,
+            "is_finished": False,
+            "invalidated_from": target,
         }
 
 

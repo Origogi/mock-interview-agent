@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Sparkles, ChevronDown } from 'lucide-react';
+import { Sparkles, ChevronDown, RotateCcw } from 'lucide-react';
 import HeroScore from '../components/HeroScore';
 
 const ACCENT = '#6e74ff';
@@ -11,7 +11,14 @@ const KPI_DEFS = [
   { key: 'communication', label: 'Communication' },
 ];
 
-export default function ReportPage({ report, evaluations = [], onRestart, accent = ACCENT }) {
+export default function ReportPage({
+  report,
+  evaluations = [],
+  onRestart,
+  onRewindRequest,
+  rewindDisabled = false,
+  accent = ACCENT,
+}) {
   const scores = report?.scores || {};
   const feedback = report?.feedback || {};
   const isPartial = report?.is_partial === true;
@@ -107,7 +114,14 @@ export default function ReportPage({ report, evaluations = [], onRestart, accent
           <h2 className="qa-title">상세 문항 피드백</h2>
           <div className="qa-list">
             {evaluations.map((ev, idx) => (
-              <QaAccordion key={idx} ev={ev} idx={idx} accent={accent} />
+              <QaAccordion
+                key={idx}
+                ev={ev}
+                idx={idx}
+                accent={accent}
+                onRewind={() => onRewindRequest?.({ questionIndex: idx, source: 'page4' })}
+                rewindDisabled={rewindDisabled || !onRewindRequest}
+              />
             ))}
             {!evaluations.length && (
               <div className="qa-empty">평가된 문항이 없습니다.</div>
@@ -156,11 +170,12 @@ function LegendBar({ label, value, accent, delay }) {
   );
 }
 
-function QaAccordion({ ev, idx, accent }) {
+function QaAccordion({ ev, idx, accent, onRewind, rewindDisabled }) {
   const [open, setOpen] = useState(false);
   const score = ev.score ?? 0;
   const tone = score >= 7 ? 'good' : score >= 5 ? 'mid' : 'low';
   const preview = (ev.question || '').replace(/\s+/g, ' ').slice(0, 80);
+  const rewindTitle = rewindDisabled ? '지금은 되감을 수 없어요.' : '이 질문 다시 답변하기';
 
   return (
     <div className={`qa-item${open ? ' is-open' : ''}`} style={{ '--accent': accent }}>
@@ -186,6 +201,20 @@ function QaAccordion({ ev, idx, accent }) {
           <div className="qa-block">
             <div className="qa-h">면접관의 피드백</div>
             <p className="qa-feedback">{ev.feedback || '(피드백 없음)'}</p>
+          </div>
+          <div className="qa-actions">
+            <span title={rewindTitle}>
+              <button
+                type="button"
+                className="qa-rewind-btn"
+                onClick={onRewind}
+                disabled={rewindDisabled}
+                aria-label={`Q${idx + 1} 다시 답변하기`}
+              >
+                <RotateCcw size={15} />
+                <span>이 질문 다시 답변하기</span>
+              </button>
+            </span>
           </div>
         </div>
       </div>

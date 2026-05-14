@@ -1,6 +1,5 @@
-from typing import TypedDict, List, Dict, Annotated, Optional, NotRequired
-from langgraph.graph import StateGraph, START, END
-from langgraph.graph.message import add_messages
+from typing import List, Dict, Optional, NotRequired
+from langgraph.graph import MessagesState, StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import interrupt
 from langchain_openai import ChatOpenAI
@@ -8,8 +7,6 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from dotenv import load_dotenv
 from tools import extract_resume_text
 import json
-import os
-import operator
 
 load_dotenv()
 
@@ -17,13 +14,12 @@ load_dotenv()
 # ─────────────────────────────────────────
 # State
 # ─────────────────────────────────────────
-class InterviewState(TypedDict):
+class InterviewState(MessagesState):
     resume_file_path: NotRequired[str]        # 입력 PDF 경로 (Node 1 입력 전용)
     resume_summary: Dict                      # 이력서 파싱 데이터
-    messages: Annotated[list, add_messages]   # 채팅 기록
     question_count: int                       # 진행된 질문 수
     max_questions: int                        # 최대 질문 수
-    evaluations: Annotated[List[Dict], operator.add]  # 턴별 평가 결과 (누적)
+    evaluations: List[Dict]                   # 턴별 평가 결과
     final_report: Optional[Dict]              # 최종 리포트
     is_early_terminated: NotRequired[bool]    # 조기 종료 플래그 (Should-S8)
     answered_count: NotRequired[int]          # 편의 캐시 (len(evaluations) 동치)
@@ -193,7 +189,7 @@ def evaluator_node(state: InterviewState) -> dict:
     evaluation["question"] = last_question
     evaluation["answer"] = last_answer
 
-    return {"evaluations": [evaluation]}
+    return {"evaluations": state.get("evaluations", []) + [evaluation]}
 
 
 def count_valid_evaluations(evaluations: List[Dict]) -> int:

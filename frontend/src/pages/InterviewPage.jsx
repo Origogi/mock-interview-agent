@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useStickToBottom } from 'use-stick-to-bottom';
+import { RotateCcw } from 'lucide-react';
 import SampleAnswerButton from '../debug/SampleAnswerButton.jsx';
 
 const ACCENT = '#6e74ff';
@@ -56,6 +57,8 @@ export default function InterviewPage({
   onSend,
   onFillSampleAnswer,
   onAbort,
+  onRewindRequest,
+  rewindDisabled = false,
   accent = ACCENT,
 }) {
   const {
@@ -368,6 +371,16 @@ export default function InterviewPage({
   const busy = isAiTyping || isStreaming;
   const finished = currentQuestionCount > maxQuestions;
   const inputDisabled = busy || finished || isFetchingSample || isClosingInterview;
+  const cardRewindLocked = busy || isFetchingSample || isClosingInterview || rewindDisabled;
+  const rewindDisabledReason = isClosingInterview
+    ? '최종 리포트를 준비하는 동안에는 되감을 수 없어요.'
+    : busy
+    ? '면접관 응답 또는 평가가 끝난 뒤 되감을 수 있어요.'
+    : isFetchingSample
+    ? '샘플 답변 생성이 끝난 뒤 되감을 수 있어요.'
+    : rewindDisabled
+    ? '다른 작업이 진행 중이에요.'
+    : '';
 
   const progressPct = isClosingInterview
     ? 100
@@ -486,6 +499,17 @@ export default function InterviewPage({
                   ev={ev}
                   accent={accent}
                   fresh={i === evaluations.length - 1}
+                  onRewind={() => onRewindRequest?.({ questionIndex: i, source: 'page3' })}
+                  rewindDisabled={
+                    cardRewindLocked ||
+                    !onRewindRequest ||
+                    i >= Math.max(0, currentQuestionCount - 1)
+                  }
+                  rewindDisabledReason={
+                    i >= Math.max(0, currentQuestionCount - 1)
+                      ? '현재 답변 대기 중인 질문은 되감을 수 없어요.'
+                      : rewindDisabledReason
+                  }
                 />
               ))}
             </ul>
@@ -623,11 +647,20 @@ function TypingStatus({ accent }) {
   );
 }
 
-function EvalCard({ idx, ev, accent, fresh }) {
+function EvalCard({
+  idx,
+  ev,
+  accent,
+  fresh,
+  onRewind,
+  rewindDisabled,
+  rewindDisabledReason,
+}) {
   const [open, setOpen] = useState(false);
   const tier = getScoreTier(ev.score, accent);
   const question = ev.question || ev.q || '';
   const feedback = ev.feedback || '';
+  const rewindTitle = rewindDisabledReason || '답변 전으로 되감기';
   return (
     <li className={`iv-eval ${open ? 'is-open' : ''} ${fresh ? 'is-fresh' : ''}`}>
       <button className="iv-eval-row" onClick={() => setOpen(!open)}>
@@ -646,6 +679,20 @@ function EvalCard({ idx, ev, accent, fresh }) {
         <div className="iv-eval-detail-inner">
           <div className="iv-eval-detail">
             <div className="iv-eval-fb">{feedback}</div>
+            <div className="iv-eval-actions">
+              <span className="iv-rewind-tooltip" title={rewindTitle}>
+                <button
+                  type="button"
+                  className="iv-rewind-action"
+                  onClick={onRewind}
+                  disabled={rewindDisabled}
+                  aria-label={`Q${idx + 1} 답변 전으로 되감기`}
+                >
+                  <RotateCcw size={14} />
+                  <span>답변 전으로 되감기</span>
+                </button>
+              </span>
+            </div>
           </div>
         </div>
       </div>
