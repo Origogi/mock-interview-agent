@@ -81,10 +81,8 @@ npm run dev
 
 ### 1. 기획 및 비전 (Planning)
 * **[기획 폴더 README](./planning/README.md)** — 핵심 가치 및 문서 인덱스
-* [프로젝트 진행 상황 (Todo List)](./planning/todo.md)
-* [프로젝트 기획서 (Proposal)](./planning/proposal.md)
+* [제품 및 기능 명세 (Features)](./planning/features.md)
 * [UI/UX 스토리보드 (Storyboard)](./planning/storyboard.md)
-* [기능 명세 및 백로그 (Features)](./planning/features.md)
 
 ### 2. 기술 스펙 (Tech Specs)
 * [프론트엔드 아키텍처 (React + Vite)](./frontend/README.md)

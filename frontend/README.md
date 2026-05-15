@@ -36,22 +36,59 @@ CSS 토큰은 `src/index.css` 상단 + `src/tokens.css` 에 정의되어 있고,
 
 | Page | currentPage | 컴포넌트 | 기능 |
 |------|------------|---------|------|
-| Page 1 | `home` | `pages/HomePage.jsx` | 이력서 PDF 드래그&드롭 업로드, 서버 상태 인디케이터 |
+| Page 1 | `home` | `pages/HomePage.jsx` | 이력서 PDF 드래그&드롭 업로드, 서버 상태 인디케이터, 샘플 이력서 빠른 진입 |
 | Page 2 | `summary` | `pages/SummaryPage.jsx` | 분석 로더 → 결과(stat row + 경력 + 스택 + 프로젝트 + 강점/약점) 렌더링 |
-| Page 3 | `interview` | `pages/InterviewPage.jsx` | 좌 레일(진행률 + 평가 카드) + 중앙 채팅 (Claude-style 토큰 fade) |
-| Page 4 | `report` | `pages/ReportPage.jsx` | HeroScore + 4대 역량 커스텀 SVG 레이더 차트 + 문항별 CSS 아코디언 |
+| Page 3 | `interview` | `pages/InterviewPage.jsx` | 좌 레일(진행률 + 평가 카드) + 중앙 채팅 + 샘플 답변 + 조기 종료 + 타임머신 진입 |
+| Page 4 | `report` | `pages/ReportPage.jsx` | HeroScore + 4대 역량 커스텀 SVG 레이더 차트 + 문항별 CSS 아코디언 + 다시 답변하기 |
 
-## 4. API 연동
+## 4. 주요 UI 구현
+
+- `App.jsx`가 전체 세션 상태와 페이지 전환을 관리합니다.
+- `PageTransition`은 페이지 간 zoom + blur cross-fade를 담당합니다.
+- `InterviewPage.jsx`는 면접 메시지, 좌측 진행 레일, 평가 카드, 입력창, 조기 종료 진입점, 샘플 답변 진입점을 렌더링합니다.
+- `ReportPage.jsx`는 최종 리포트, 부분 리포트 배지, 문항별 상세 피드백, 타임머신 진입점을 렌더링합니다.
+- `SampleAnswerButton.jsx`는 Best/Good/Bad 샘플 답변 드롭업을 담당합니다.
+- `EarlyEndModal.jsx`는 조기 종료 확인과 답변 수에 따른 안내 문구를 담당합니다.
+
+### 면접 스트리밍 처리
+
+- 기본 면접 진행은 `/api/chat/stream`을 먼저 사용합니다.
+- 스트림 응답은 토큰 reveal queue로 받아 화면에 순차 표시합니다.
+- 스트리밍 실패 시 동기 `/api/chat` 호출로 폴백합니다.
+- 스트리밍 중에는 입력, 샘플 답변, 조기 종료 일부 상태를 잠가 중복 액션을 방지합니다.
+- 조기 종료가 스트리밍 중 실행되면 `AbortController`로 진행 중인 요청을 중단합니다.
+
+### 스크롤/입력 UX
+
+- 답변 제출 직후 사용자 답변 버블을 viewport 상단에 pin합니다.
+- AI 응답 스트리밍 중에는 하단을 자동 추종합니다.
+- 사용자가 직접 위로 스크롤하면 자동 추종을 끕니다.
+- 한글 IME 입력 중 Enter 오동작을 막습니다.
+- textarea에는 멀티라인과 Tab 들여쓰기를 지원합니다.
+
+### 타임머신 UI
+
+- Page 3 완료 평가 카드에서 `답변 전으로 되감기` 액션을 제공합니다.
+- Page 4 문항 상세에서 `이 질문 다시 답변하기` 액션을 제공합니다.
+- 실행 전 확인 모달을 띄우고, 이후 전역 full-cover 오버레이로 라우팅과 상태 변경을 가립니다.
+- 오버레이 완료 상태는 짧게 유지하고 fade out 중심으로 종료합니다.
+- `prefers-reduced-motion`에서는 짧은 fade 전환으로 대체합니다.
+
+## 5. API 연동
 
 | 메서드 | 경로 | 용도 |
 |--------|-----|------|
-| `POST` | `/api/upload` | 이력서 PDF 업로드 → Resume Parser |
-| `POST` | `/api/chat` | 면접 답변 제출 → 평가 + 다음 질문 (또는 최종 리포트) |
 | `GET` | `/` | 백엔드 헬스체크 (5s 폴링) |
+| `POST` | `/api/upload` | 이력서 PDF 업로드 |
+| `POST` | `/api/chat` | 동기 면접 진행 폴백 |
+| `POST` | `/api/chat/stream` | 스트리밍 면접 진행 |
+| `POST` | `/api/interview/end` | 면접 조기 종료 |
+| `POST` | `/api/interview/rewind` | 특정 질문 답변 전 상태로 되감기 |
+| `POST` | `/api/debug/sample-answer` | 디버그용 샘플 답변 생성 |
 
 백엔드 CORS allowlist는 `localhost:5173`, `5174`, `3000`. Vite가 다른 포트로 fall back하면 `lsof -i :5173` 으로 점검 후 정리.
 
-## 5. 실행
+## 6. 실행
 
 ```bash
 cd frontend

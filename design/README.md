@@ -72,6 +72,11 @@
 |------|------|
 | [`v1-redesign.html`](./assets/redesign/v1-redesign.html) | v2 Apple-style 디자인 standalone HTML 프로토타입 (Page 1~4 전체) |
 
+### 목업 (`assets/mockups/`)
+| 파일 | 설명 |
+|------|------|
+| [`page3_question_journey_mockup.html`](./assets/mockups/page3_question_journey_mockup.html) | Page 3 — 질문 여정 지도 + Question Inspector standalone HTML 목업 |
+
 ### 실제 구현 스크린샷 (`assets/prod_screentshot/`)
 | 파일 | 설명 |
 |------|------|

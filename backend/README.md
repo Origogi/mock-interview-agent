@@ -71,6 +71,9 @@ class InterviewState(TypedDict):
     max_questions: int                        # 최대 질문 수 (기본 5)
     evaluations: List[Dict]                   # 턴마다 누적되는 평가 결과 (점수, 피드백)
     final_report: Dict                        # 최종 결과 리포트
+    is_partial: bool                          # 조기 종료 리포트 여부
+    answered_count: int                       # 유효 답변 수
+    disclaimer: str                           # 부분 리포트 안내 문구
 ```
 
 ## 4. 노드 (Nodes)
@@ -167,12 +170,31 @@ result = generate_sample_answer.invoke({"thread_id": "session-id", "quality_tier
 
 | 메서드 | 경로 | 용도 |
 |--------|-----|------|
+| `GET` | `/` | 헬스체크 |
 | `POST` | `/api/upload` | PDF 업로드 → `parser_graph` 호출 (Resume Parser 노드) → `parsed_data` 반환 |
 | `POST` | `/api/chat` | 사용자 답변 → Evaluator → Interviewer (또는 Report) |
+| `POST` | `/api/chat/stream` | `llm.stream()` 기반 Chunked NDJSON 스트리밍 면접 진행. 실패 시 프론트는 `/api/chat`으로 폴백 |
+| `POST` | `/api/interview/end` | 조기 종료. 유효 답변 3개 이상이면 부분 리포트, 3개 미만이면 폐기 응답 |
+| `POST` | `/api/interview/rewind` | thread history에서 선택 질문 답변 전 checkpoint를 찾아 현재 상태를 파괴적으로 복원 |
 | `POST` | `/api/debug/sample-answer` | **[디버그]** 현재 진행 중인 질문에 대해 등급별 샘플 답변 생성. Body: `{"thread_id": "...", "quality_tier": "best"\|"good"\|"bad"}`. Response: `{"answer": "...", "expected_score_range": [low, high]}` |
-| `GET` | `/` | 헬스체크 |
 
 CORS: `localhost:5173`, `5174`, `3000` 만 허용.
+
+### 면접 종료 정책
+
+- `max_questions`는 "질문 수"가 아니라 "완료된 답변/평가 수" 기준입니다.
+- 5번째 답변 평가 후에는 다음 질문을 만들지 않고 `report_node`로 이동합니다.
+- 조기 종료는 LangGraph 재진입이 아니라 별도 라우팅에서 현재 state를 읽어 처리합니다.
+- 유효 답변이 3개 이상이면 `report_node`를 부분 리포트 모드로 호출합니다.
+- 유효 답변이 3개 미만이면 리포트를 만들지 않고 프론트가 Page 1로 복귀할 수 있는 응답을 반환합니다.
+- 조기 종료 race condition 방지를 위해 thread 단위 lock을 사용합니다.
+
+### 타임머신 되감기 정책
+
+- `/api/interview/rewind`는 thread history에서 대상 질문의 답변 전 checkpoint를 찾습니다.
+- Qn으로 되감으면 Q1~Q(n-1)의 평가만 유지하고 Qn 이후 평가와 리포트는 무효화합니다.
+- 현재 질문은 Qn으로 복원하고, 프론트는 Page 3 입력 대기 상태로 돌아갑니다.
+- MVP는 원본 타임라인 보존 없이 현재 타임라인을 덮어쓰는 파괴적 복원 방식입니다.
 
 ## 7. 테스트
 
