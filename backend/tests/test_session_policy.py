@@ -81,6 +81,53 @@ def test_interviewer_prompt_includes_current_session_context():
     assert "세션 순서는 고정" in system
 
 
+def test_cs_prompt_draws_hard_boundary_against_framework_questions():
+    system = format_interviewer_system(
+        resume_summary={
+            "tech_stack": ["Android", "Jetpack Compose", "ViewModel", "Room"],
+            "projects": [
+                {
+                    "name": "모바일 앱",
+                    "technologies": ["Android", "Jetpack Compose", "Room"],
+                }
+            ],
+        },
+        evaluations=[],
+        question_number=1,
+    )
+
+    assert "세션 경계는 하드 바운더리" in system
+    assert "이번 세션의 주 평가대상" in system
+    assert "자료구조/알고리즘" in system
+    assert "Android/Flutter/React/Spring/FastAPI 같은 프레임워크 API" in system
+    assert "Activity/Fragment/Compose/ViewModel 사용법을 묻지 말고" in system
+    assert "CS 원리로 변환하세요" in system
+
+
+@pytest.mark.parametrize(
+    ("question_number", "required_focus", "required_forbidden"),
+    [
+        (6, "프레임워크·라이브러리의 선택 이유", "순수 CS 개념 설명만 요구하는 질문"),
+        (11, "장애·성능 저하·설계 문제", "프레임워크 API 사용법 퀴즈"),
+        (16, "기술적 의사결정 공유", "순수 CS 지식 검증 질문"),
+    ],
+)
+def test_each_session_prompt_includes_explicit_scope_boundaries(
+    question_number,
+    required_focus,
+    required_forbidden,
+):
+    system = format_interviewer_system(
+        resume_summary={"tech_stack": ["Android", "FastAPI", "PostgreSQL"]},
+        evaluations=[{"score": 6, **build_question_metadata(i)} for i in range(1, question_number)],
+        question_number=question_number,
+    )
+
+    assert "세션 경계는 하드 바운더리" in system
+    assert required_focus in system
+    assert required_forbidden in system
+
+
 def test_interviewer_context_window_keeps_recent_five_evaluations_and_qa_pairs():
     evaluations = [
         {"question": f"Q{i}", "answer": f"A{i}", "score": 6, **build_question_metadata(i)}

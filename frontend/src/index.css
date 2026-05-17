@@ -1086,6 +1086,141 @@
   transition: border-color var(--dur-quick);
 }
 .iv-input:focus-within { border-color: var(--border-strong); }
+.iv-final-bridge {
+  max-width: 880px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--final-accent) 28%, var(--border));
+  border-radius: 18px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--final-accent) 14%, transparent), transparent 45%),
+    var(--surface);
+  box-shadow: 0 14px 42px rgba(0, 0, 0, 0.24);
+  animation: final-bridge-in var(--dur-slow) var(--ease-soft) both;
+}
+.iv-final-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--final-accent);
+  background: color-mix(in srgb, var(--final-accent) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--final-accent) 26%, transparent);
+}
+.iv-final-copy {
+  min-width: 0;
+}
+.iv-final-kicker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+.iv-final-title {
+  margin-top: 3px;
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--fg);
+}
+.iv-final-feedback {
+  margin: 6px 0 0;
+  color: var(--fg-muted);
+  font-size: 13px;
+  line-height: 1.55;
+  max-width: 56rem;
+}
+.iv-final-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 190px;
+}
+.iv-final-score {
+  min-width: 58px;
+  height: 34px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--final-accent) 34%, transparent);
+  background: color-mix(in srgb, var(--final-accent) 12%, transparent);
+  color: var(--final-accent);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1;
+}
+.iv-final-score small {
+  margin-left: 2px;
+  color: var(--fg-dim);
+  font-size: 11px;
+  font-weight: 500;
+}
+.iv-final-action {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--final-accent);
+  color: #fff;
+  font-family: var(--font-text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity var(--dur-quick), transform var(--dur-quick);
+}
+.iv-final-action:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.iv-final-action:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+.iv-final-progress-ring {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  transform: rotate(-90deg);
+}
+.iv-final-progress-track,
+.iv-final-progress-path {
+  fill: none;
+  stroke-width: 2.2;
+}
+.iv-final-progress-track {
+  stroke: rgba(255, 255, 255, 0.28);
+}
+.iv-final-progress-path {
+  stroke: #fff;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: final-progress-draw var(--auto-progress-ms, 10000ms) linear forwards;
+}
+@keyframes final-progress-draw {
+  to { stroke-dashoffset: 0; }
+}
+.iv-final-note {
+  flex-basis: 100%;
+  color: var(--fg-dim);
+  font-size: 11px;
+  text-align: right;
+}
+@keyframes final-bridge-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .iv-textarea {
   width: 100%; min-height: 48px; max-height: 200px;
   background: none; border: none; outline: none; resize: none;
@@ -1139,6 +1274,16 @@
   .iv-question-dot { height: 24px; font-size: 9px; border-radius: 7px; }
   .iv-stage-head, .iv-thread-scroll, .iv-input-wrap { padding-left: 20px; padding-right: 20px; }
   .eval-toast { right: 16px; top: 72px; }
+  .iv-final-bridge {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: flex-start;
+  }
+  .iv-final-side {
+    grid-column: 1 / -1;
+    min-width: 0;
+    justify-content: flex-start;
+  }
+  .iv-final-note { text-align: left; }
 }
 
 /* ============================== */

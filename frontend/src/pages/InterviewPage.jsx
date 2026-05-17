@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useStickToBottom } from 'use-stick-to-bottom';
-import { RotateCcw } from 'lucide-react';
+import { ArrowRight, FileText, RotateCcw } from 'lucide-react';
 import SampleAnswerButton from '../debug/SampleAnswerButton.jsx';
 import {
   INTERVIEW_TOTAL_QUESTIONS,
@@ -63,8 +63,11 @@ export default function InterviewPage({
   isAiTyping,
   isFetchingSample,
   isClosingInterview = false,
+  reportReady = false,
+  reportAutoTransitionMs = 10000,
   onSend,
   onFillSampleAnswer,
+  onViewReport,
   onAbort,
   onRewindRequest,
   rewindDisabled = false,
@@ -325,6 +328,21 @@ export default function InterviewPage({
     if (messages.length === 0) return;
     const lastMsg = messages[messages.length - 1];
     if (lastMsg.streamDone && streaming.idx !== -1) {
+      if (lastMsg.instant) {
+        streamedIdxRef.current.add(streaming.idx);
+        streamInitializedRef.current = false;
+        setStreaming((s) => ({
+          ...s,
+          idx: -1,
+          mode: 'idle',
+          partialContent: '',
+          tokens: [],
+          revealed: 0,
+          isDone: false,
+        }));
+        return;
+      }
+
       if (streaming.mode === 'stream') {
         const source = messages[streaming.idx]?.content || '';
         const tokens = source.match(/\S+\s*/g) || [];
@@ -375,6 +393,15 @@ export default function InterviewPage({
   const reactionEmoji = lastTier?.avatar ?? '🤔';
   const avatarAccent = lastTier?.color ?? accent;
   const latestEvalTier = latestEval ? getScoreTier(latestEval.score, accent) : null;
+  const finalEvaluation = isClosingInterview && evaluations.length
+    ? evaluations[evaluations.length - 1]
+    : null;
+  const finalEvaluationNumber = finalEvaluation
+    ? getEvaluationQuestionNumber(finalEvaluation, evaluations.length)
+    : INTERVIEW_TOTAL_QUESTIONS;
+  const finalEvaluationTier = finalEvaluation?.score != null
+    ? getScoreTier(finalEvaluation.score, accent)
+    : null;
 
   const isStreamRevealing =
     streaming.mode === 'stream' && (!streaming.isDone || streaming.revealed < streaming.tokens.length);
@@ -555,7 +582,7 @@ export default function InterviewPage({
           <div ref={threadContent} className="iv-thread">
             {messages.map((m, idx) => {
               const isLastAi = idx === lastAiIdx && m.role === 'ai';
-              const isStreamingThis = isLastAi && streaming.idx === idx;
+              const isStreamingThis = isLastAi && streaming.idx === idx && !m.instant;
               const isPendingStream = isStreamingThis && streaming.mode === 'stream' && streaming.revealed === 0;
 
               let visibleTokens = null;
@@ -596,41 +623,119 @@ export default function InterviewPage({
         </div>
 
         <div className="iv-input-wrap">
-          <div className={`iv-input ${inputDisabled ? 'is-disabled' : ''}`}>
-            {/* Sample Answer Button */}
-            <div style={{ marginBottom: '12px' }}>
-              <SampleAnswerButton
-                onPick={onFillSampleAnswer}
-                disabled={finished || isAiTyping || isClosingInterview}
-                isLoading={isFetchingSample}
-              />
-            </div>
-            <textarea
-              ref={textareaRef}
-              className="iv-textarea"
-              placeholder={placeholder}
-              defaultValue=""
-              disabled={inputDisabled}
-              onChange={(e) => setChatInput(e.target.value)}
-              onCompositionEnd={(e) => setChatInput(e.target.value)}
-              onKeyDown={onKey}
-              rows={2}
+          {isClosingInterview ? (
+            <FinalReportBridge
+              evaluation={finalEvaluation}
+              questionNumber={finalEvaluationNumber}
+              tier={finalEvaluationTier}
+              reportReady={reportReady}
+              autoTransitionMs={reportAutoTransitionMs}
+              onViewReport={onViewReport}
+              accent={accent}
             />
-            <div className="iv-input-foot">
-              <span className="iv-input-hint">Enter · Shift+Enter · Tab</span>
-              <button
-                className="iv-send"
-                style={{ background: accent }}
-                onClick={() => onSend(chatInput)}
-                disabled={inputDisabled || !chatInput.trim()}
-              >
-                전송 <span className="arr">→</span>
-              </button>
+          ) : (
+            <div className={`iv-input ${inputDisabled ? 'is-disabled' : ''}`}>
+              {/* Sample Answer Button */}
+              <div style={{ marginBottom: '12px' }}>
+                <SampleAnswerButton
+                  onPick={onFillSampleAnswer}
+                  disabled={finished || isAiTyping || isClosingInterview}
+                  isLoading={isFetchingSample}
+                />
+              </div>
+              <textarea
+                ref={textareaRef}
+                className="iv-textarea"
+                placeholder={placeholder}
+                defaultValue=""
+                disabled={inputDisabled}
+                onChange={(e) => setChatInput(e.target.value)}
+                onCompositionEnd={(e) => setChatInput(e.target.value)}
+                onKeyDown={onKey}
+                rows={2}
+              />
+              <div className="iv-input-foot">
+                <span className="iv-input-hint">Enter · Shift+Enter · Tab</span>
+                <button
+                  className="iv-send"
+                  style={{ background: accent }}
+                  onClick={() => onSend(chatInput)}
+                  disabled={inputDisabled || !chatInput.trim()}
+                >
+                  전송 <span className="arr">→</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
     </div>
+  );
+}
+
+function FinalReportBridge({
+  evaluation,
+  questionNumber,
+  tier,
+  reportReady,
+  autoTransitionMs,
+  onViewReport,
+  accent,
+}) {
+  const score = evaluation?.score;
+  const feedback = evaluation?.feedback || '마지막 답변 평가를 반영해 최종 리포트를 정리하고 있어요.';
+  const scoreAccent = tier?.color || accent;
+
+  return (
+    <section
+      className="iv-final-bridge"
+      style={{
+        '--final-accent': scoreAccent,
+        '--auto-progress-ms': `${autoTransitionMs}ms`,
+      }}
+    >
+      <div className="iv-final-icon" aria-hidden="true">
+        <FileText size={18} />
+      </div>
+      <div className="iv-final-copy">
+        <div className="iv-final-kicker">Q{questionNumber} 평가 완료</div>
+        <div className="iv-final-title">마지막 답변까지 반영했습니다</div>
+        <p className="iv-final-feedback">{feedback}</p>
+      </div>
+      <div className="iv-final-side">
+        {score != null && (
+          <div className="iv-final-score">
+            {score}
+            <small>/10</small>
+          </div>
+        )}
+        <button
+          type="button"
+          className="iv-final-action"
+          onClick={onViewReport}
+          disabled={!reportReady || !onViewReport}
+        >
+          <AutoReportProgress />
+          <span>{reportReady ? '리포트 보기' : '리포트 준비 중'}</span>
+          <ArrowRight size={15} />
+        </button>
+        <div className="iv-final-note">10초 후 결과 리포트로 이동합니다.</div>
+      </div>
+    </section>
+  );
+}
+
+function AutoReportProgress() {
+  return (
+    <svg
+      className="iv-final-progress-ring"
+      viewBox="0 0 18 18"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle className="iv-final-progress-track" cx="9" cy="9" r="7" />
+      <circle className="iv-final-progress-path" cx="9" cy="9" r="7" pathLength="1" />
+    </svg>
   );
 }
 

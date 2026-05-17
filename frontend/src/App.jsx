@@ -15,7 +15,7 @@ import {
   PARTIAL_REPORT_MIN_ANSWERS,
 } from './utils/interviewPolicy.js';
 
-const REPORT_TRANSITION_DELAY_MS = 1000;
+const FINAL_REPORT_AUTO_TRANSITION_MS = 10000;
 const TIME_MACHINE_PAGE_SETTLE_MS = 420;
 const TIME_MACHINE_DONE_HOLD_MS = 1000;
 const TIME_MACHINE_REVEAL_MS = 360;
@@ -124,24 +124,32 @@ function App() {
       setCurrentPage('report');
       setIsClosingInterview(false);
       reportTransitionRef.current = null;
-    }, REPORT_TRANSITION_DELAY_MS);
+    }, FINAL_REPORT_AUTO_TRANSITION_MS);
+  };
+
+  const goToReport = () => {
+    if (!finalReport) return;
+    clearReportTransition();
+    setIsClosingInterview(false);
+    setCurrentPage('report');
   };
 
   const showClosingMessage = (message) => {
     const content = message || DEFAULT_CLOSING_MESSAGE;
+    const closingMessage = { role: 'ai', content, streamDone: true, instant: true };
     setMessages((prev) => {
       if (!prev.length) {
-        return [{ role: 'ai', content, streamDone: true }];
+        return [closingMessage];
       }
 
       const updated = [...prev];
       const last = updated[updated.length - 1];
       if (last.role === 'ai' && !last.content) {
-        updated[updated.length - 1] = { ...last, content, streamDone: true };
+        updated[updated.length - 1] = { ...last, ...closingMessage };
         return updated;
       }
 
-      return [...updated, { role: 'ai', content, streamDone: true }];
+      return [...updated, closingMessage];
     });
   };
 
@@ -620,8 +628,11 @@ function App() {
               isAiTyping={isAiTyping}
               isFetchingSample={isFetchingSample}
               isClosingInterview={isClosingInterview}
+              reportReady={!!finalReport}
+              reportAutoTransitionMs={FINAL_REPORT_AUTO_TRANSITION_MS}
               onSend={sendAnswer}
               onFillSampleAnswer={handleFillSampleAnswer}
+              onViewReport={goToReport}
               onAbort={handleEarlyEndOpen}
               onRewindRequest={handleRewindRequest}
               rewindDisabled={earlyEndOpen || !!rewindRequest || timeMachine.open}
