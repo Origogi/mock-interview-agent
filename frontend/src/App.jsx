@@ -19,8 +19,16 @@ const FINAL_REPORT_AUTO_TRANSITION_MS = 10000;
 const TIME_MACHINE_PAGE_SETTLE_MS = 420;
 const TIME_MACHINE_DONE_HOLD_MS = 1000;
 const TIME_MACHINE_REVEAL_MS = 360;
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(
+  /\/$/,
+  ''
+);
 const DEFAULT_CLOSING_MESSAGE =
   '좋습니다. 여기까지 20개 질문에 대한 답변을 모두 확인했습니다. 이제 전체 답변을 바탕으로 최종 리포트를 정리하겠습니다.';
+
+function apiUrl(path = '') {
+  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+}
 
 // BE가 evaluations[0].question을 빈 문자열로 내려보내는 케이스가 있어,
 // 첫 번째 AI 메시지(첫 질문) 본문으로 복구한다. 나머지 인덱스는 BE 응답 그대로 사용.
@@ -156,7 +164,7 @@ function App() {
   useEffect(() => {
     const checkServer = async () => {
       try {
-        const response = await fetch('http://localhost:8000/');
+        const response = await fetch(apiUrl('/'));
         setServerStatus(response.ok ? 'connected' : 'error');
       } catch {
         setServerStatus('error');
@@ -184,7 +192,7 @@ function App() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('http://localhost:8000/api/upload', {
+      const response = await fetch(apiUrl('/api/upload'), {
         method: 'POST',
         body: formData,
       });
@@ -222,7 +230,7 @@ function App() {
     setCurrentPage('interview');
     setIsAiTyping(true);
     try {
-      const res = await fetch('http://localhost:8000/api/chat', {
+      const res = await fetch(apiUrl('/api/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ thread_id: newThreadId, resume_summary: summary }),
@@ -250,7 +258,7 @@ function App() {
 
     try {
       // 스트림 엔드포인트 시도
-      const res = await fetch('http://localhost:8000/api/chat/stream', {
+      const res = await fetch(apiUrl('/api/chat/stream'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ thread_id: threadId, user_answer: answer }),
@@ -339,7 +347,7 @@ function App() {
       console.warn('Stream failed, falling back to sync /api/chat:', streamErr);
       setIsAiTyping(true);
       try {
-        const res = await fetch('http://localhost:8000/api/chat', {
+        const res = await fetch(apiUrl('/api/chat'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ thread_id: threadId, user_answer: answer }),
@@ -373,7 +381,7 @@ function App() {
     if (!threadId || isFetchingSample || isAiTyping || isClosingInterview) return;
     setIsFetchingSample(true);
     try {
-      const res = await fetch('http://localhost:8000/api/debug/sample-answer', {
+      const res = await fetch(apiUrl('/api/debug/sample-answer'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ thread_id: threadId, quality_tier: tier }),
@@ -441,7 +449,7 @@ function App() {
     setIsAiTyping(false);
 
     try {
-      const res = await fetch('http://localhost:8000/api/interview/end', {
+      const res = await fetch(apiUrl('/api/interview/end'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ thread_id: threadId }),
@@ -543,7 +551,7 @@ function App() {
     });
 
     try {
-      const res = await fetch('http://localhost:8000/api/interview/rewind', {
+      const res = await fetch(apiUrl('/api/interview/rewind'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -36,10 +36,18 @@ INTERVIEW_CLOSING_MESSAGE = (
     "이제 전체 답변을 바탕으로 최종 리포트를 정리하겠습니다."
 )
 
+
+def _get_cors_origins() -> List[str]:
+    raw_origins = os.getenv("BACKEND_CORS_ORIGINS") or os.getenv("CORS_ORIGINS")
+    if raw_origins:
+        return [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+    return ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"]
+
+
 # CORS middleware to allow React frontend to communicate with FastAPI
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
+    allow_origins=_get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -175,6 +183,12 @@ def _find_rewind_snapshot(history: list, target_question_index: int):
 @app.get("/", response_model=HealthCheck)
 def read_root():
     return {"status": "Backend is running!"}
+
+
+@app.head("/")
+def read_root_head():
+    return None
+
 
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
@@ -802,4 +816,4 @@ async def sample_answer(request: SampleAnswerRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))

@@ -76,6 +76,22 @@ cd frontend
 npm run dev
 ```
 
+## 🚢 배포 (Railway)
+
+Railway는 `frontend/`와 `backend/`를 각각 별도 서비스로 배포합니다.
+
+| Service | Root Directory | Config File Path |
+|---------|----------------|------------------|
+| Backend | `/backend` | `/backend/railway.toml` |
+| Frontend | `/frontend` | `/frontend/railway.toml` |
+
+필수 환경 변수:
+
+- Backend: `OPENAI_API_KEY`, `OPENAI_MODEL=gpt-4.1-mini`, `BACKEND_CORS_ORIGINS=https://<frontend-domain>`
+- Frontend: `VITE_API_BASE_URL=https://<backend-domain>`
+
+상세 절차는 [Railway 배포 문서](./planning/deployment.md)를 참고합니다.
+
 ## 📂 기획 및 설계 문서 (Index)
 이 프로젝트는 기획, 프론트엔드, 백엔드가 완벽하게 분리된 모노레포 구조로 관리됩니다. 상세 아키텍처 및 기획 문서는 각 폴더의 README를 참고해 주세요.
 
@@ -83,6 +99,7 @@ npm run dev
 * **[기획 폴더 README](./planning/README.md)** — 핵심 가치 및 문서 인덱스
 * [제품 및 기능 명세 (Features)](./planning/features.md)
 * [UI/UX 스토리보드 (Storyboard)](./planning/storyboard.md)
+* [Railway 배포 가이드](./planning/deployment.md)
 
 ### 2. 기술 스펙 (Tech Specs)
 * [프론트엔드 아키텍처 (React + Vite)](./frontend/README.md)

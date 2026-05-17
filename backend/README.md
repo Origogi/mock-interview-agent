@@ -203,7 +203,13 @@ result = generate_sample_answer.invoke({"thread_id": "session-id", "quality_tier
 | `POST` | `/api/interview/rewind` | thread history에서 선택 질문 답변 전 checkpoint를 찾아 현재 상태를 파괴적으로 복원 |
 | `POST` | `/api/debug/sample-answer` | **[디버그]** 현재 진행 중인 질문에 대해 등급별 샘플 답변 생성. Body: `{"thread_id": "...", "quality_tier": "best"\|"good"\|"bad"}`. Response: `{"answer": "...", "expected_score_range": [low, high]}` |
 
-CORS: `localhost:5173`, `5174`, `3000` 만 허용.
+CORS: 기본값은 `localhost:5173`, `5174`, `3000` 이며, 배포 환경에서는 `BACKEND_CORS_ORIGINS` 또는 `CORS_ORIGINS`에 허용할 origin을 쉼표로 지정합니다.
+
+```env
+BACKEND_CORS_ORIGINS=https://<frontend-domain>
+```
+
+Railway 배포는 `backend/railway.toml`을 사용합니다. 서비스 설정은 Root Directory `/backend`, Config File Path `/backend/railway.toml`입니다.
 
 ### 면접 종료 정책
 

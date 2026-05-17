@@ -23,6 +23,7 @@ Over-engineering을 지양하고 MVP 핵심 기능 완성에 집중합니다.
 |------|------|
 | [`features.md`](./features.md) | 제품 개요, 구현된 기능 상세, 남은 Todo |
 | [`storyboard.md`](./storyboard.md) | 화면 단위 UI 레이아웃 및 사용자 흐름 (v2 Apple-style 기준) |
+| [`deployment.md`](./deployment.md) | Railway FE/BE 분리 배포 절차와 환경 변수 |
 
 ## 와이어프레임 위치
 화면별 와이어프레임 PNG는 `../design/assets/wireframe/` 에 있고, v2 디자인 프로토타입은 `../design/assets/redesign/v1-redesign.html` 에 있습니다.

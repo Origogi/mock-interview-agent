@@ -96,7 +96,15 @@ CSS 토큰은 `src/index.css` 상단 + `src/tokens.css` 에 정의되어 있고,
 | `POST` | `/api/interview/rewind` | 특정 질문 답변 전 상태로 되감기 |
 | `POST` | `/api/debug/sample-answer` | 디버그용 샘플 답변 생성 |
 
-백엔드 CORS allowlist는 `localhost:5173`, `5174`, `3000`. Vite가 다른 포트로 fall back하면 `lsof -i :5173` 으로 점검 후 정리.
+API base URL은 `VITE_API_BASE_URL`로 지정합니다. 로컬 기본값은 `http://localhost:8000`입니다.
+
+```env
+VITE_API_BASE_URL=https://<backend-domain>
+```
+
+백엔드 CORS allowlist는 배포 환경에서 `BACKEND_CORS_ORIGINS`로 프론트엔드 domain을 허용해야 합니다. Vite가 로컬에서 다른 포트로 fall back하면 `lsof -i :5173` 으로 점검 후 정리합니다.
+
+Railway 배포는 `frontend/railway.toml`, `Dockerfile`, `Caddyfile`을 사용합니다. 서비스 설정은 Root Directory `/frontend`, Config File Path `/frontend/railway.toml`입니다.
 
 ## 7. 실행
 
