@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { INTERVIEW_TOTAL_QUESTIONS } from '../utils/interviewPolicy.js';
 
 const ACCENT = '#6e74ff';
 const LOADER_OUT_MS = 400;
@@ -173,7 +174,7 @@ function SummaryLoaded({ data, onStart, accent, animKey }) {
       <div className="sum-cta">
         <div className="cta-text">
           <div className="cta-h">준비됐다면 시작하세요.</div>
-          <div className="cta-d">최대 5개의 질문, 평균 12분 소요됩니다.</div>
+          <div className="cta-d">총 {INTERVIEW_TOTAL_QUESTIONS}개의 질문, 4개 세션으로 진행됩니다.</div>
         </div>
         <button
           className="btn btn-primary big"

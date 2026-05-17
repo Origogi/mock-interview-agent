@@ -16,7 +16,7 @@
 |------|------|
 | Frontend | React (Vite), CSS-only, Framer Motion, Recharts |
 | Backend | Python, FastAPI, LangGraph, LangChain |
-| LLM | OpenAI `gpt-4o-mini` |
+| LLM | OpenAI `gpt-4.1-mini` 기본, 환경변수로 변경 가능 |
 | Package | `uv` (backend), `npm` (frontend) |
 
 ## 환경 변수

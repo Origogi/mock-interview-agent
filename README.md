@@ -29,7 +29,7 @@
 
 * **Frontend:** React (Vite), CSS-only (Glassmorphism), Framer Motion, Recharts (차트 시각화)
 * **Backend & Agent:** Python, FastAPI, LangGraph, LangChain
-* **LLM:** OpenAI (`gpt-4o-mini`)
+* **LLM:** OpenAI (`gpt-4.1-mini` 기본, 환경변수로 변경 가능)
 * **Data Processing:** PyPDF2 (이력서 텍스트 파싱)
 
 ## 🏗 시스템 아키텍처 (LangGraph Workflow)

@@ -91,8 +91,8 @@ export default function RewindConfirmModal({
           이 질문으로 되감기
         </h2>
         <p id="rewind-desc" className="rewind-body">
-          Q{questionNumber} 답변 전으로 돌아갑니다. Q{questionNumber} 이후의 답변,
-          평가, 리포트는 무효화되고 다시 생성됩니다.
+          Q{questionNumber} 답변 전으로 돌아갑니다. 세션 경계와 관계없이 Q{questionNumber}부터
+          Q20까지의 답변, 평가, 리포트는 모두 무효화되고 다시 생성됩니다.
         </p>
         <div className="rewind-actions">
           <button

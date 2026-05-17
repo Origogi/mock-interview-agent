@@ -12,10 +12,15 @@ from agent import (
     graph,
     parser_graph,
     llm,
-    INTERVIEWER_SYSTEM,
+    DEFAULT_MAX_QUESTIONS,
+    build_question_metadata,
+    ensure_technical_interview_question,
     evaluator_node,
+    format_interviewer_system,
     report_node,
     count_valid_evaluations,
+    window_interviewer_evaluations,
+    window_interviewer_messages,
 )
 from langgraph.types import Command
 from tools import generate_sample_answer
@@ -27,7 +32,7 @@ load_dotenv() # Load variables from .env
 app = FastAPI(title="Tech-Interviewer API")
 
 INTERVIEW_CLOSING_MESSAGE = (
-    "좋습니다. 여기까지 5개 질문에 대한 답변을 모두 확인했습니다. "
+    "좋습니다. 여기까지 20개 질문에 대한 답변을 모두 확인했습니다. "
     "이제 전체 답변을 바탕으로 최종 리포트를 정리하겠습니다."
 )
 
@@ -47,7 +52,7 @@ class HealthCheck(BaseModel):
 # ─────────────────────────────────────────
 # Thread-level Lock Manager (advisor [High] race guard)
 # ─────────────────────────────────────────
-# 조기 종료(`/api/interview/end`)와 자연 종료(`chat_stream_generator`의 5턴 분기)가
+# 조기 종료(`/api/interview/end`)와 자연 종료(`chat_stream_generator`의 20턴 분기)가
 # 동시에 `report_node`를 두 번 호출하지 않도록 thread_id 단위 직렬화.
 # 또한 토큰 스트림 도중 `/end` 진입 시 evaluator_node 완료 전 stale snapshot 방지.
 _thread_locks: Dict[str, asyncio.Lock] = {}
@@ -118,6 +123,22 @@ def _is_discarded_report(final_report: object) -> bool:
     return isinstance(final_report, dict) and final_report.get("discarded") is True
 
 
+def _public_question_metadata(question_number: int) -> Dict:
+    meta = build_question_metadata(question_number)
+    return {
+        "questionNumber": meta["questionNumber"],
+        "sessionId": meta["sessionId"],
+        "sessionLabel": meta["sessionLabel"],
+        "sessionIndex": meta["sessionIndex"],
+        "sessionQuestionIndex": meta["sessionQuestionIndex"],
+        "sessionTotalQuestions": meta["sessionTotalQuestions"],
+    }
+
+
+def _pending_question_number(values: dict) -> int:
+    return min(count_valid_evaluations(values.get("evaluations", [])) + 1, DEFAULT_MAX_QUESTIONS)
+
+
 def _snapshot_interrupt_question(snapshot: object) -> Optional[str]:
     """Interrupted graph snapshot에만 남아 있는 질문 텍스트를 추출한다."""
     for task in getattr(snapshot, "tasks", []) or []:
@@ -144,10 +165,10 @@ def _find_rewind_snapshot(history: list, target_question_index: int):
             if messages and _message_role(messages[-1]) == "ai":
                 return snapshot
 
-        # Legacy `/api/chat` sessions exposed the first question only as an
-        # interrupt value, so Q1 may not exist in `messages`. Keep those
-        # already-running demos rewindable by accepting the interrupt snapshot.
-        if target_question_index == 1 and _snapshot_interrupt_question(snapshot):
+        # Sync `/api/chat` interrupt snapshots may hold the pending question
+        # only as an interrupt value. Accept that shape for any Qn when the
+        # evaluation count proves this is the Qn answer-before checkpoint.
+        if _snapshot_interrupt_question(snapshot):
             return snapshot
     return None
 
@@ -203,7 +224,7 @@ async def chat(request: ChatRequest):
             "resume_summary": request.resume_summary or {},
             "messages": [],
             "question_count": 0,
-            "max_questions": 5,
+            "max_questions": DEFAULT_MAX_QUESTIONS,
             "evaluations": [],
             "final_report": None,
         }
@@ -224,6 +245,7 @@ async def chat(request: ChatRequest):
     if interrupts:
         # 면접 진행 중: 다음 질문 반환
         question = interrupts[0].value
+        question_number = _pending_question_number(current_values)
 
         # `/api/chat` 첫 질문은 LangGraph interrupt 값으로만 노출되고
         # node return이 아직 커밋되지 않아 messages에 남지 않는다.
@@ -234,7 +256,8 @@ async def chat(request: ChatRequest):
                 config,
                 {
                     "messages": [AIMessage(content=question)],
-                    "question_count": 1,
+                    "question_count": question_number,
+                    "max_questions": DEFAULT_MAX_QUESTIONS,
                 },
             )
             state = graph.get_state(config)
@@ -242,7 +265,9 @@ async def chat(request: ChatRequest):
 
         return {
             "question": question,
-            "question_count": current_values.get("question_count", 1),
+            "question_count": question_number,
+            "max_questions": DEFAULT_MAX_QUESTIONS,
+            **_public_question_metadata(question_number),
             "evaluations": current_values.get("evaluations", []),
             "is_finished": False,
             "final_report": None,
@@ -253,6 +278,7 @@ async def chat(request: ChatRequest):
             "question": None,
             "closing_message": INTERVIEW_CLOSING_MESSAGE,
             "question_count": current_values.get("question_count", 0),
+            "max_questions": DEFAULT_MAX_QUESTIONS,
             "evaluations": current_values.get("evaluations", []),
             "is_finished": True,
             "final_report": current_values.get("final_report"),
@@ -280,7 +306,7 @@ async def chat_stream_generator(request: ChatRequest) -> AsyncGenerator[str, Non
     config = {"configurable": {"thread_id": request.thread_id}}
 
     # advisor [High]: thread_id 단위 lock 으로 `/api/interview/end`와의 race 방지
-    # (5턴째 report_node 호출과 동시에 /end가 들어오는 케이스, stream 도중 stale snapshot 케이스)
+    # (20턴째 report_node 호출과 동시에 /end가 들어오는 케이스, stream 도중 stale snapshot 케이스)
     thread_lock = await _get_thread_lock(request.thread_id)
 
     try:
@@ -293,6 +319,7 @@ async def chat_stream_generator(request: ChatRequest) -> AsyncGenerator[str, Non
                     "question": None,
                     "closing_message": INTERVIEW_CLOSING_MESSAGE,
                     "question_count": existing_state.values.get("question_count", 0),
+                    "max_questions": DEFAULT_MAX_QUESTIONS,
                     "evaluations": existing_state.values.get("evaluations", []),
                     "is_finished": True,
                     "final_report": existing_state.values.get("final_report"),
@@ -308,21 +335,21 @@ async def chat_stream_generator(request: ChatRequest) -> AsyncGenerator[str, Non
                     "resume_summary": request.resume_summary or {},
                     "messages": [],
                     "question_count": 0,
-                    "max_questions": 5,
+                    "max_questions": DEFAULT_MAX_QUESTIONS,
                     "evaluations": [],
                     "final_report": None,
                 }
 
                 # Stream first question (Interviewer logic in route handler)
-                resume_str = json.dumps(initial_state["resume_summary"], ensure_ascii=False, indent=2)
-                system = INTERVIEWER_SYSTEM.format(resume_summary=resume_str, evaluations="없음 (첫 번째 질문)")
+                system = format_interviewer_system(initial_state["resume_summary"], [], 1)
 
                 question_text = ""
                 for chunk in llm.stream([SystemMessage(content=system)]):
                     token = chunk.content if hasattr(chunk, 'content') else ""
                     if token:
                         question_text += token
-                        yield json.dumps({"type": "token", "value": token}, ensure_ascii=False) + "\n"
+                question_text = ensure_technical_interview_question(question_text, 1)
+                yield json.dumps({"type": "token", "value": question_text}, ensure_ascii=False) + "\n"
 
                 # Update state with first question
                 initial_state["messages"] = [AIMessage(content=question_text)]
@@ -347,15 +374,14 @@ async def chat_stream_generator(request: ChatRequest) -> AsyncGenerator[str, Non
 
                 current_evaluations = current_values.get("evaluations", [])
                 next_evaluations = eval_result.get("evaluations", current_evaluations)
-                question_count = current_values.get("question_count", 0)
-                max_questions = current_values.get("max_questions", 5)
-                is_finished = len(next_evaluations) >= max_questions
+                is_finished = count_valid_evaluations(next_evaluations) >= DEFAULT_MAX_QUESTIONS
 
                 if is_finished:
                     # Last answer: do not generate another question. Persist answer/eval/report only.
                     state_for_report = dict(current_values)
                     state_for_report["messages"] = existing_messages + [answer_message]
                     state_for_report["evaluations"] = next_evaluations
+                    state_for_report["max_questions"] = DEFAULT_MAX_QUESTIONS
                     report_result = report_node(state_for_report)
 
                     graph.update_state(
@@ -363,7 +389,8 @@ async def chat_stream_generator(request: ChatRequest) -> AsyncGenerator[str, Non
                         {
                             "messages": [answer_message],
                             "evaluations": next_evaluations,
-                            "answered_count": len(next_evaluations),
+                            "answered_count": count_valid_evaluations(next_evaluations),
+                            "max_questions": DEFAULT_MAX_QUESTIONS,
                             "final_report": report_result["final_report"],
                         },
                     )
@@ -373,28 +400,35 @@ async def chat_stream_generator(request: ChatRequest) -> AsyncGenerator[str, Non
                     )
                 else:
                     # Continue: use the fresh evaluation context to generate the next question.
-                    resume_str = json.dumps(current_values["resume_summary"], ensure_ascii=False, indent=2)
-                    evals_str = json.dumps(next_evaluations, ensure_ascii=False, indent=2)
-                    system = INTERVIEWER_SYSTEM.format(resume_summary=resume_str, evaluations=evals_str)
-                    messages_for_llm = [SystemMessage(content=system)] + existing_messages + [answer_message]
+                    question_number = count_valid_evaluations(next_evaluations) + 1
+                    system = format_interviewer_system(
+                        current_values["resume_summary"],
+                        window_interviewer_evaluations(next_evaluations),
+                        question_number,
+                    )
+                    messages_for_llm = [SystemMessage(content=system)] + window_interviewer_messages(
+                        existing_messages + [answer_message]
+                    )
 
                     question_text = ""
                     for chunk in llm.stream(messages_for_llm):
                         token = chunk.content if hasattr(chunk, 'content') else ""
                         if token:
                             question_text += token
-                            yield json.dumps({"type": "token", "value": token}, ensure_ascii=False) + "\n"
+                    question_text = ensure_technical_interview_question(question_text, question_number)
+                    yield json.dumps({"type": "token", "value": question_text}, ensure_ascii=False) + "\n"
 
                     graph.update_state(
                         config,
                         {
                             "messages": [answer_message, AIMessage(content=question_text)],
                             "evaluations": next_evaluations,
-                            "question_count": question_count + 1,
+                            "question_count": question_number,
+                            "max_questions": DEFAULT_MAX_QUESTIONS,
                         },
                     )
                     print(
-                        f"[Stream] Answer evaluated and next question streamed, question_count={question_count + 1}",
+                        f"[Stream] Answer evaluated and next question streamed, question_count={question_number}",
                         flush=True,
                     )
 
@@ -404,20 +438,22 @@ async def chat_stream_generator(request: ChatRequest) -> AsyncGenerator[str, Non
             state = graph.get_state(config)
             current_values = state.values
 
-            # A question_count of max_questions means Q5 has been asked, not answered.
+            # A question_count of max_questions means Q20 has been asked, not answered.
             # Natural finish only starts after the max-th evaluation/report exists.
             question_count = current_values.get("question_count", 0)
-            max_questions = current_values.get("max_questions", 5)
             evaluations = current_values.get("evaluations", [])
             is_finished = (
                 current_values.get("final_report") is not None
-                or len(evaluations) >= max_questions
+                or count_valid_evaluations(evaluations) >= DEFAULT_MAX_QUESTIONS
             )
+            response_question_number = question_count if is_finished else _pending_question_number(current_values)
 
             response_data = {
                 "question": None if is_finished else current_values.get("messages", [])[-1].content if current_values.get("messages") else None,
                 "closing_message": INTERVIEW_CLOSING_MESSAGE if is_finished else None,
-                "question_count": question_count,
+                "question_count": question_count if is_finished else response_question_number,
+                "max_questions": DEFAULT_MAX_QUESTIONS,
+                **_public_question_metadata(response_question_number),
                 "evaluations": evaluations,
                 "is_finished": is_finished,
                 "final_report": current_values.get("final_report"),
@@ -438,7 +474,7 @@ async def chat_stream_generator(request: ChatRequest) -> AsyncGenerator[str, Non
 # ─────────────────────────────────────────
 # Interview Early Termination API
 # ─────────────────────────────────────────
-EARLY_TERMINATION_THRESHOLD = 3  # TPM 결정 (PM 추천 2 → TPM 3)
+EARLY_TERMINATION_THRESHOLD = 5
 
 
 class InterviewEndRequest(BaseModel):
@@ -453,8 +489,8 @@ async def end_interview(request: InterviewEndRequest):
     동작 분기:
     - thread_id 없음 (체크포인트 미존재) → 404
     - 이미 자연 종료 (final_report is not None) → 409
-    - 유효 답변 수 < 3 → Case B: discarded=true, final_report=null
-    - 유효 답변 수 >= 3 → Case A: 부분 리포트 생성 (is_partial=true, disclaimer 포함)
+    - 유효 답변 수 < 5 → Case B: discarded=true, final_report=null
+    - 유효 답변 수 >= 5 → Case A: 부분 리포트 생성 (is_partial=true, disclaimer 포함)
 
     race 가드 (advisor [High]):
     - thread_id 단위 asyncio.Lock 으로 chat_stream_generator와 직렬화
@@ -483,7 +519,7 @@ async def end_interview(request: InterviewEndRequest):
             raise HTTPException(status_code=409, detail="이미 면접이 종료되어 리포트가 생성되었습니다.")
 
         evaluations = current_values.get("evaluations", [])
-        max_questions = current_values.get("max_questions", 5)
+        max_questions = DEFAULT_MAX_QUESTIONS
 
         # 4) advisor [High]: 유효 평가 카운트로 임계 재검증
         # JSON 파싱 실패 등으로 evaluations에 stale entry가 들어있을 수 있음
@@ -505,6 +541,8 @@ async def end_interview(request: InterviewEndRequest):
             discarded_report_sentinel = {
                 "discarded": True,
                 "is_partial": True,
+                "answered_count": answered_count,
+                "max_questions": max_questions,
                 "disclaimer": "답변이 부족하여 리포트가 생성되지 않았습니다.",
             }
             graph.update_state(
@@ -533,6 +571,7 @@ async def end_interview(request: InterviewEndRequest):
         partial_state = dict(current_values)
         partial_state["is_early_terminated"] = True
         partial_state["answered_count"] = answered_count
+        partial_state["max_questions"] = max_questions
 
         report_result = report_node(partial_state)
         final_report = report_result["final_report"]
@@ -584,6 +623,8 @@ async def rewind_interview(request: InterviewRewindRequest):
         raise HTTPException(status_code=400, detail="source는 page3 또는 page4여야 합니다.")
     if target < 1:
         raise HTTPException(status_code=400, detail="target_question_index는 1 이상이어야 합니다.")
+    if target > DEFAULT_MAX_QUESTIONS:
+        raise HTTPException(status_code=400, detail=f"target_question_index는 {DEFAULT_MAX_QUESTIONS} 이하여야 합니다.")
 
     config = {"configurable": {"thread_id": thread_id}}
     state = graph.get_state(config)
@@ -616,20 +657,30 @@ async def rewind_interview(request: InterviewRewindRequest):
 
         snapshot_values = dict(snapshot.values or {})
         restored_messages = snapshot_values.get("messages", []) or []
-        if not restored_messages:
-            interrupt_question = _snapshot_interrupt_question(snapshot)
-            if interrupt_question:
-                restored_messages = [AIMessage(content=interrupt_question)]
+        interrupt_question = _snapshot_interrupt_question(snapshot)
+        if interrupt_question:
+            last_message = restored_messages[-1] if restored_messages else None
+            last_is_same_question = (
+                last_message is not None
+                and _message_role(last_message) == "ai"
+                and _message_content(last_message) == interrupt_question
+            )
+            if not last_is_same_question:
+                restored_messages = [*restored_messages, AIMessage(content=interrupt_question)]
+
+        if restored_messages and _message_role(restored_messages[-1]) == "ai":
+            restored_question = _message_content(restored_messages[-1])
+            guarded_question = ensure_technical_interview_question(restored_question, target)
+            if guarded_question != restored_question:
+                restored_messages = [*restored_messages[:-1], AIMessage(content=guarded_question)]
+
         restored_evaluations = snapshot_values.get("evaluations", []) or []
 
         restore_update = dict(snapshot_values)
         restore_update["messages"] = _replace_messages_update(restored_messages)
         restore_update["evaluations"] = restored_evaluations
         restore_update["question_count"] = target
-        restore_update["max_questions"] = snapshot_values.get(
-            "max_questions",
-            current_values.get("max_questions", 5),
-        )
+        restore_update["max_questions"] = DEFAULT_MAX_QUESTIONS
         restore_update["final_report"] = None
         restore_update["is_early_terminated"] = False
         restore_update["answered_count"] = len(restored_evaluations)
@@ -651,7 +702,8 @@ async def rewind_interview(request: InterviewRewindRequest):
             "thread_id": thread_id,
             "question": question,
             "question_count": restored_values.get("question_count", target),
-            "max_questions": restored_values.get("max_questions", 5),
+            "max_questions": DEFAULT_MAX_QUESTIONS,
+            **_public_question_metadata(target),
             "messages": _normalize_messages(response_messages),
             "evaluations": restored_values.get("evaluations", []),
             "final_report": None,

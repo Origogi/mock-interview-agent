@@ -10,13 +10,17 @@ import EarlyEndModal from './components/EarlyEndModal.jsx';
 import RewindConfirmModal from './components/RewindConfirmModal.jsx';
 import TimeMachineOverlay from './components/TimeMachineOverlay.jsx';
 import { FIXTURE_SAMPLE_RESUME } from './debug/fixtures.js';
+import {
+  INTERVIEW_TOTAL_QUESTIONS,
+  PARTIAL_REPORT_MIN_ANSWERS,
+} from './utils/interviewPolicy.js';
 
 const REPORT_TRANSITION_DELAY_MS = 1000;
 const TIME_MACHINE_PAGE_SETTLE_MS = 420;
 const TIME_MACHINE_DONE_HOLD_MS = 1000;
 const TIME_MACHINE_REVEAL_MS = 360;
 const DEFAULT_CLOSING_MESSAGE =
-  '좋습니다. 여기까지 5개 질문에 대한 답변을 모두 확인했습니다. 이제 전체 답변을 바탕으로 최종 리포트를 정리하겠습니다.';
+  '좋습니다. 여기까지 20개 질문에 대한 답변을 모두 확인했습니다. 이제 전체 답변을 바탕으로 최종 리포트를 정리하겠습니다.';
 
 // BE가 evaluations[0].question을 빈 문자열로 내려보내는 케이스가 있어,
 // 첫 번째 AI 메시지(첫 질문) 본문으로 복구한다. 나머지 인덱스는 BE 응답 그대로 사용.
@@ -78,7 +82,7 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [evaluations, setEvaluations] = useState([]);
   const [currentQuestionCount, setCurrentQuestionCount] = useState(1);
-  const maxQuestions = 5;
+  const maxQuestions = INTERVIEW_TOTAL_QUESTIONS;
   const [chatInput, setChatInput] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [isFetchingSample, setIsFetchingSample] = useState(false);
@@ -655,7 +659,7 @@ function App() {
         open={earlyEndOpen}
         answeredCount={evaluations.length}
         maxQuestions={maxQuestions}
-        threshold={3}
+        threshold={PARTIAL_REPORT_MIN_ANSWERS}
         onConfirm={handleEarlyEndConfirm}
         onCancel={handleEarlyEndCancel}
       />

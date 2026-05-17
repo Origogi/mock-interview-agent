@@ -29,8 +29,8 @@ export default function TimeMachineOverlay({ open, phase = 'running', questionNu
           <div className="tm-title">{isDone ? '되감기 완료' : '타임머신 실행 중'}</div>
           <div className="tm-subtitle">
             {isDone
-              ? '다시 답변할 준비가 되었어요.'
-              : `Q${questionNumber} 답변 전으로 되감고 있어요`}
+              ? `Q${questionNumber}부터 Q20까지 다시 답변할 준비가 되었어요.`
+              : `세션 경계와 관계없이 Q${questionNumber} 이후 전체 흐름을 무효화하고 있어요.`}
           </div>
         </div>
       </div>

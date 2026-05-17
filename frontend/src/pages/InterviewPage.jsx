@@ -2,6 +2,15 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useStickToBottom } from 'use-stick-to-bottom';
 import { RotateCcw } from 'lucide-react';
 import SampleAnswerButton from '../debug/SampleAnswerButton.jsx';
+import {
+  INTERVIEW_TOTAL_QUESTIONS,
+  SESSION_QUESTION_COUNT,
+  buildSessionProgress,
+  formatSessionScore,
+  getCurrentQuestionNumber,
+  getEvaluationQuestionNumber,
+  getSessionForQuestion,
+} from '../utils/interviewPolicy.js';
 
 const ACCENT = '#6e74ff';
 const TOAST_MS = 2600;
@@ -346,7 +355,11 @@ export default function InterviewPage({
   useEffect(() => {
     if (evaluations.length > lastEvalLenRef.current) {
       const ev = evaluations[evaluations.length - 1];
-      setLatestEval({ score: ev.score, idx: evaluations.length - 1 });
+      setLatestEval({
+        score: ev.score,
+        idx: evaluations.length - 1,
+        questionNumber: getEvaluationQuestionNumber(ev, evaluations.length),
+      });
     }
     lastEvalLenRef.current = evaluations.length;
   }, [evaluations]);
@@ -369,7 +382,25 @@ export default function InterviewPage({
     streaming.mode === 'fallback' && streaming.revealed < streaming.tokens.length;
   const isStreaming = streaming.idx !== -1 && (isStreamRevealing || isFallbackRevealing);
   const busy = isAiTyping || isStreaming;
-  const finished = currentQuestionCount > maxQuestions;
+  const effectiveMaxQuestions = maxQuestions || INTERVIEW_TOTAL_QUESTIONS;
+  const answeredCount = Math.min(evaluations.length, effectiveMaxQuestions);
+  const serverFinished = Number(currentQuestionCount) > effectiveMaxQuestions;
+  const finished = answeredCount >= effectiveMaxQuestions || serverFinished;
+  const currentQuestionNumber = getCurrentQuestionNumber({
+    evaluations,
+    serverQuestionCount: currentQuestionCount,
+    isFinished: finished || isClosingInterview,
+  });
+  const currentSession = getSessionForQuestion(currentQuestionNumber);
+  const sessionGroups = useMemo(
+    () =>
+      buildSessionProgress({
+        evaluations,
+        currentQuestionNumber,
+        isFinished: finished || isClosingInterview,
+      }),
+    [currentQuestionNumber, evaluations, finished, isClosingInterview]
+  );
   const inputDisabled = busy || finished || isFetchingSample || isClosingInterview;
   const cardRewindLocked = busy || isFetchingSample || isClosingInterview || rewindDisabled;
   const rewindDisabledReason = isClosingInterview
@@ -384,7 +415,7 @@ export default function InterviewPage({
 
   const progressPct = isClosingInterview
     ? 100
-    : Math.min((Math.max(currentQuestionCount, 1) - 1) / maxQuestions, 1) * 100;
+    : Math.min(answeredCount / effectiveMaxQuestions, 1) * 100;
 
   const placeholder = isFetchingSample
     ? '샘플 답변 생성 중…'
@@ -458,18 +489,20 @@ export default function InterviewPage({
             </div>
             <div className="iv-side-profile-copy">
               <div className="iv-int-name">시니어 엔지니어 면접관</div>
-              <div className="iv-int-role">Tech-Interviewer AI · gpt-4o-mini</div>
+              <div className="iv-int-role">Tech-Interviewer AI · gpt-4.1-mini</div>
             </div>
           </div>
 
           <div className="iv-progress-block">
             <div className="iv-progress-num">
               <span className="big" style={{ color: accent }}>
-                {Math.min(currentQuestionCount, maxQuestions)}
+                Q{currentQuestionNumber}
               </span>
-              <span className="of">/ {maxQuestions}</span>
+              <span className="of">/ {effectiveMaxQuestions}</span>
             </div>
-            <div className="iv-progress-lbl">현재 질문</div>
+            <div className="iv-progress-lbl">
+              {currentSession.label} · {currentSession.rangeLabel}
+            </div>
             <div className="iv-progress-bar">
               <div
                 className="iv-progress-fill"
@@ -483,37 +516,21 @@ export default function InterviewPage({
         </div>
 
         <div className="iv-rail-evals">
-          <div className="iv-rail-h">실시간 평가</div>
-          {evaluations.length === 0 ? (
-            <div className="iv-empty">
-              <div className="iv-empty-glyph">···</div>
-              <div className="iv-empty-t">아직 답변이 없습니다</div>
-              <div className="iv-empty-s">첫 답변을 입력해보세요</div>
-            </div>
-          ) : (
-            <ul className="iv-eval-list">
-              {evaluations.map((ev, i) => (
-                <EvalCard
-                  key={i}
-                  idx={i}
-                  ev={ev}
-                  accent={accent}
-                  fresh={i === evaluations.length - 1}
-                  onRewind={() => onRewindRequest?.({ questionIndex: i, source: 'page3' })}
-                  rewindDisabled={
-                    cardRewindLocked ||
-                    !onRewindRequest ||
-                    i >= Math.max(0, currentQuestionCount - 1)
-                  }
-                  rewindDisabledReason={
-                    i >= Math.max(0, currentQuestionCount - 1)
-                      ? '현재 답변 대기 중인 질문은 되감을 수 없어요.'
-                      : rewindDisabledReason
-                  }
-                />
-              ))}
-            </ul>
-          )}
+          <div className="iv-rail-h">4개 세션 진행</div>
+          <div className="iv-session-list">
+            {sessionGroups.map((session) => (
+              <SessionGroup
+                key={session.key}
+                session={session}
+                accent={accent}
+                freshIndex={evaluations.length - 1}
+                onRewindRequest={onRewindRequest}
+                cardRewindLocked={cardRewindLocked}
+                currentQuestionNumber={currentQuestionNumber}
+                rewindDisabledReason={rewindDisabledReason}
+              />
+            ))}
+          </div>
         </div>
       </aside>
 
@@ -528,7 +545,7 @@ export default function InterviewPage({
               <small>/10</small>
             </div>
             <div className="eval-toast-text">
-              <div className="eval-toast-h">Q{latestEval.idx + 1} 평가 완료</div>
+              <div className="eval-toast-h">Q{latestEval.questionNumber} 평가 완료</div>
               <div className="eval-toast-d">{latestEvalTier.toastCopy}</div>
             </div>
           </div>
@@ -617,6 +634,106 @@ export default function InterviewPage({
   );
 }
 
+function SessionGroup({
+  session,
+  accent,
+  freshIndex,
+  onRewindRequest,
+  cardRewindLocked,
+  currentQuestionNumber,
+  rewindDisabledReason,
+}) {
+  const scoreLabel = session.isComplete ? formatSessionScore(session.averageScore10) : '평가 부족';
+  const statusLabel = session.isComplete
+    ? '완료'
+    : session.isActive
+    ? '진행 중'
+    : session.completedCount > 0
+    ? '진행 중'
+    : '대기';
+
+  return (
+    <section
+      className={`iv-session ${session.isActive ? 'is-active' : ''} ${session.isComplete ? 'is-complete' : ''}`}
+      style={{ '--accent': accent }}
+    >
+      <div className="iv-session-head">
+        <div className="iv-session-copy">
+          <div className="iv-session-range">{session.rangeLabel}</div>
+          <div className="iv-session-title">{session.label}</div>
+        </div>
+        <div className="iv-session-meta">
+          <span className="iv-session-score">{scoreLabel}</span>
+          <span className="iv-session-state">{statusLabel}</span>
+        </div>
+      </div>
+
+      <div className="iv-session-progress-row">
+        <div className="iv-session-progress-track" aria-hidden="true">
+          <div className="iv-session-progress-fill" style={{ width: `${session.progress * 100}%` }} />
+        </div>
+        <span className="iv-session-progress-text">
+          {session.completedCount}/{SESSION_QUESTION_COUNT}
+        </span>
+      </div>
+
+      <div className="iv-question-dots" aria-label={`${session.label} 문항 상태`}>
+        {session.items.map((item) => (
+          <span
+            key={item.questionNumber}
+            className={`iv-question-dot is-${item.status}`}
+            title={`Q${item.questionNumber} · ${getQuestionStatusLabel(item.status)}`}
+          >
+            Q{item.questionNumber}
+          </span>
+        ))}
+      </div>
+
+      <ul className="iv-eval-list">
+        {session.items.map((item) =>
+          item.evaluation ? (
+            <EvalCard
+              key={item.questionNumber}
+              idx={item.evaluationIndex}
+              questionNumber={item.questionNumber}
+              ev={item.evaluation}
+              accent={accent}
+              fresh={item.evaluationIndex === freshIndex}
+              onRewind={() =>
+                onRewindRequest?.({ questionIndex: item.evaluationIndex, source: 'page3' })
+              }
+              rewindDisabled={
+                cardRewindLocked ||
+                !onRewindRequest ||
+                item.questionNumber >= currentQuestionNumber
+              }
+              rewindDisabledReason={
+                item.questionNumber >= currentQuestionNumber
+                  ? '현재 답변 대기 중인 질문은 되감을 수 없어요.'
+                  : rewindDisabledReason
+              }
+            />
+          ) : (
+            <li
+              key={item.questionNumber}
+              className={`iv-question-placeholder is-${item.status}`}
+            >
+              <span className="iv-eval-num">Q{item.questionNumber}</span>
+              <span>{getQuestionStatusLabel(item.status)}</span>
+            </li>
+          )
+        )}
+      </ul>
+    </section>
+  );
+}
+
+function getQuestionStatusLabel(status) {
+  if (status === 'completed') return '완료';
+  if (status === 'current') return '현재';
+  return '대기';
+}
+
 function Bubble({ idx, m, accent, tokens, showCaret, isPending = false }) {
   const isAi = m.role === 'ai';
   return (
@@ -649,6 +766,7 @@ function TypingStatus({ accent }) {
 
 function EvalCard({
   idx,
+  questionNumber,
   ev,
   accent,
   fresh,
@@ -660,12 +778,17 @@ function EvalCard({
   const tier = getScoreTier(ev.score, accent);
   const question = ev.question || ev.q || '';
   const feedback = ev.feedback || '';
-  const rewindTitle = rewindDisabledReason || '답변 전으로 되감기';
+  const displayNumber = questionNumber ?? idx + 1;
+  const rewindTitle =
+    rewindDisabledReason || `Q${displayNumber}부터 Q20까지 답변, 평가, 리포트가 무효화됩니다.`;
+  const preview = question
+    ? `${question.slice(0, 32)}${question.length > 32 ? '…' : ''}`
+    : '질문 내용 복구 중';
   return (
     <li className={`iv-eval ${open ? 'is-open' : ''} ${fresh ? 'is-fresh' : ''}`}>
       <button className="iv-eval-row" onClick={() => setOpen(!open)}>
-        <span className="iv-eval-num">Q{idx + 1}</span>
-        <span className="iv-eval-q">{question.slice(0, 32)}…</span>
+        <span className="iv-eval-num">Q{displayNumber}</span>
+        <span className="iv-eval-q">{preview}</span>
         <span
           className={`iv-score ${tier.id}`}
           style={{ '--score-color': tier.color }}
@@ -686,10 +809,10 @@ function EvalCard({
                   className="iv-rewind-action"
                   onClick={onRewind}
                   disabled={rewindDisabled}
-                  aria-label={`Q${idx + 1} 답변 전으로 되감기`}
+                  aria-label={`Q${displayNumber} 답변 전으로 되감기`}
                 >
                   <RotateCcw size={14} />
-                  <span>답변 전으로 되감기</span>
+                  <span>Q{displayNumber}부터 다시 답변</span>
                 </button>
               </span>
             </div>

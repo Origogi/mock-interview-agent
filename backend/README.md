@@ -8,7 +8,7 @@
 |------|---------|
 | API Server | FastAPI + Uvicorn |
 | Agent Framework | LangGraph (상태 머신/라우팅), LangChain |
-| LLM | OpenAI `gpt-4o-mini` |
+| LLM | OpenAI `gpt-4.1-mini` 기본, 환경변수로 변경 가능 |
 | PDF 파싱 | PyPDF2 |
 | Package Manager | `uv` |
 
@@ -68,7 +68,7 @@ class InterviewState(TypedDict):
     resume_summary: Dict                      # 파서가 뽑은 이력서 요약 데이터
     messages: Annotated[list, add_messages]   # 오가는 채팅 기록
     question_count: int                       # 현재 진행된 질문 수
-    max_questions: int                        # 최대 질문 수 (기본 5)
+    max_questions: int                        # 최대 질문 수 (기본 20)
     evaluations: List[Dict]                   # 턴마다 누적되는 평가 결과 (점수, 피드백)
     final_report: Dict                        # 최종 결과 리포트
     is_partial: bool                          # 조기 종료 리포트 여부
@@ -123,11 +123,23 @@ result = generate_sample_answer.invoke({"thread_id": "session-id", "quality_tier
 당신은 10년 차 시니어 개발자이자 엄격하지만 합리적인 기술 면접관입니다.
 지원자의 이력서 내용과 이전 답변을 기반으로 실무 역량을 검증해야 합니다.
 
+[현재 질문 컨텍스트]
+- 전체 질문 번호: Qn/20
+- 현재 세션: CS Fundamentals | Framework Usage | Problem Solving | Communication
+- 세션 내 질문 번호: 1~5/5
+- 현재 세션 목표: 세션별 검증 목표
+
 [원칙]
 1. 단순한 개념 질문보다는 경험 기반 질문을 하세요.
    ("React를 사용해 상태 관리를 하셨는데, 왜 Redux 대신 Zustand를 선택하셨나요?")
 2. 한 번에 하나의 질문만 하세요.
+3. 세션 순서는 고정하고, 현재 세션 목표 안에서만 질문하세요.
+4. 진행 상태, 세션 종료, 남은 질문 수를 안내하지 말고 바로 기술 질문만 하세요.
+5. 사용자의 준비 여부를 묻거나 진행 확인만 하는 질문은 금지입니다.
+6. 응답은 반드시 평가 가능한 하나의 기술 면접 질문으로 끝나야 합니다.
 ```
+
+생성 결과에 준비 확인이나 세션 종료 안내성 문구가 포함되면 서버가 현재 Q 번호와 세션에 맞는 기술 질문으로 교체합니다.
 
 ### Evaluator Prompt
 ```text
@@ -158,6 +170,19 @@ result = generate_sample_answer.invoke({"thread_id": "session-id", "quality_tier
     "cs_fundamentals": 80, "framework_usage": 90,
     "problem_solving": 75, "communication": 85
   },
+  "session_summaries": [
+    {
+      "sessionId": "cs_fundamentals",
+      "sessionLabel": "CS Fundamentals",
+      "sessionIndex": 1,
+      "answeredCount": 5,
+      "sessionTotalQuestions": 5,
+      "score": 80,
+      "status": "completed"
+    }
+  ],
+  "answered_count": 20,
+  "max_questions": 20,
   "feedback": {
     "strengths": "대용량 트래픽 처리 경험에 대한 구체적인 수치 제시가 훌륭합니다.",
     "weaknesses": "기술의 단점이나 한계에 대한 고려가 다소 부족합니다.",
@@ -174,7 +199,7 @@ result = generate_sample_answer.invoke({"thread_id": "session-id", "quality_tier
 | `POST` | `/api/upload` | PDF 업로드 → `parser_graph` 호출 (Resume Parser 노드) → `parsed_data` 반환 |
 | `POST` | `/api/chat` | 사용자 답변 → Evaluator → Interviewer (또는 Report) |
 | `POST` | `/api/chat/stream` | `llm.stream()` 기반 Chunked NDJSON 스트리밍 면접 진행. 실패 시 프론트는 `/api/chat`으로 폴백 |
-| `POST` | `/api/interview/end` | 조기 종료. 유효 답변 3개 이상이면 부분 리포트, 3개 미만이면 폐기 응답 |
+| `POST` | `/api/interview/end` | 조기 종료. 유효 답변 5개 이상이면 부분 리포트, 5개 미만이면 폐기 응답 |
 | `POST` | `/api/interview/rewind` | thread history에서 선택 질문 답변 전 checkpoint를 찾아 현재 상태를 파괴적으로 복원 |
 | `POST` | `/api/debug/sample-answer` | **[디버그]** 현재 진행 중인 질문에 대해 등급별 샘플 답변 생성. Body: `{"thread_id": "...", "quality_tier": "best"\|"good"\|"bad"}`. Response: `{"answer": "...", "expected_score_range": [low, high]}` |
 
@@ -183,10 +208,14 @@ CORS: `localhost:5173`, `5174`, `3000` 만 허용.
 ### 면접 종료 정책
 
 - `max_questions`는 "질문 수"가 아니라 "완료된 답변/평가 수" 기준입니다.
-- 5번째 답변 평가 후에는 다음 질문을 만들지 않고 `report_node`로 이동합니다.
+- 면접은 총 20문항이며, 4개 세션이 고정 순서로 진행됩니다.
+- 세션 순서: `cs_fundamentals` Q1~Q5 → `framework_usage` Q6~Q10 → `problem_solving` Q11~Q15 → `communication` Q16~Q20.
+- 20번째 답변 평가 후에는 다음 질문을 만들지 않고 `report_node`로 이동합니다.
 - 조기 종료는 LangGraph 재진입이 아니라 별도 라우팅에서 현재 state를 읽어 처리합니다.
-- 유효 답변이 3개 이상이면 `report_node`를 부분 리포트 모드로 호출합니다.
-- 유효 답변이 3개 미만이면 리포트를 만들지 않고 프론트가 Page 1로 복귀할 수 있는 응답을 반환합니다.
+- 유효 답변이 5개 이상이면 `report_node`를 부분 리포트 모드로 호출합니다.
+- 유효 답변이 5개 미만이면 리포트를 만들지 않고 프론트가 Page 1로 복귀할 수 있는 응답을 반환합니다.
+- 세션 점수는 해당 세션의 5개 답변 점수 평균을 100점 척도로 환산합니다.
+- 미완료 세션은 점수를 추정하지 않고 `scores.<sessionId> = null`, `session_summaries[].status = "insufficient_evidence"`로 표시합니다.
 - 조기 종료 race condition 방지를 위해 thread 단위 lock을 사용합니다.
 
 ### 타임머신 되감기 정책
@@ -235,7 +264,8 @@ RUN_LLM_TESTS=1
 선택 환경 변수:
 
 ```env
-EVAL_JUDGE_MODEL="gpt-4o-mini"
+OPENAI_MODEL="gpt-4.1-mini"
+EVAL_JUDGE_MODEL="gpt-4.1-mini"
 ```
 
 > 현재 LLM 테스트는 15개 테스트 각각에서 evaluator 1회 + Judge 1회를 호출하므로 총 30회 LLM 호출이 발생합니다.

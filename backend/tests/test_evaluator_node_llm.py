@@ -190,7 +190,7 @@ def _score_tier(score: int) -> str:
 def _evaluate(answer: str) -> dict:
     from langchain_core.messages import AIMessage, HumanMessage
 
-    from agent import evaluator_node
+    from agent import DEFAULT_MAX_QUESTIONS, evaluator_node
 
     result = evaluator_node(
         {
@@ -200,7 +200,7 @@ def _evaluate(answer: str) -> dict:
                 HumanMessage(content=answer),
             ],
             "question_count": 1,
-            "max_questions": 5,
+            "max_questions": DEFAULT_MAX_QUESTIONS,
             "evaluations": [],
             "final_report": None,
         }
@@ -239,7 +239,7 @@ def _judge_case(expected_tier: str, case: dict, evaluation: dict):
         )
         reason: str = Field(description="Brief explanation of the case-level judgment.")
 
-    judge_model = os.getenv("EVAL_JUDGE_MODEL", "gpt-4o-mini")
+    judge_model = os.getenv("EVAL_JUDGE_MODEL", os.getenv("OPENAI_MODEL", "gpt-4.1-mini"))
     judge_prompt = ChatPromptTemplate.from_messages(
         [
             (

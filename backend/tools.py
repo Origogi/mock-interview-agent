@@ -1,6 +1,7 @@
 from langchain_core.tools import tool
 import PyPDF2
 import json
+import os
 from typing import Dict
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -152,7 +153,8 @@ def generate_sample_answer(thread_id: str, quality_tier: str) -> Dict:
     tier_temps = {"best": 0.3, "good": 0.6, "bad": 0.8}
     temp = tier_temps[quality_tier]
 
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=temp)
+    sample_answer_model = os.getenv("SAMPLE_ANSWER_MODEL", os.getenv("OPENAI_MODEL", "gpt-4.1-mini"))
+    llm = ChatOpenAI(model=sample_answer_model, temperature=temp)
     response = llm.invoke([
         SystemMessage(content=tier_instructions[quality_tier]),
         HumanMessage(content=user_prompt)

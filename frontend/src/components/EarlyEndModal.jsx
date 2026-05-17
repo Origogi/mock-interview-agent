@@ -1,24 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  INTERVIEW_TOTAL_QUESTIONS,
+  PARTIAL_REPORT_MIN_ANSWERS,
+} from '../utils/interviewPolicy.js';
 
 /**
  * EarlyEndModal — 면접 조기 종료 확인 모달
  *
  * answeredCount 기준 분기:
- *  - >= threshold (3): Case A "결과 보기" (accent purple) → 부분 리포트 진입
- *  - <  threshold (3): Case B "그래도 종료" (warning red) → 폐기 후 Page 1
+ *  - >= threshold (5): Case A "결과 보기" (accent purple) → 부분 리포트 진입
+ *  - <  threshold (5): Case B "그래도 종료" (warning red) → 폐기 후 Page 1
  *
  * @param {boolean} open
  * @param {number} answeredCount    현재까지의 답변 수
- * @param {number} maxQuestions     총 문항 수 (기본 5)
- * @param {number} threshold        분기 기준 (기본 3)
+ * @param {number} maxQuestions     총 문항 수 (기본 20)
+ * @param {number} threshold        분기 기준 (기본 5)
  * @param {() => Promise<void>} onConfirm  Primary CTA 핸들러 (async — 내부에서 로딩 처리)
  * @param {() => void} onCancel     Secondary / Esc / Backdrop 핸들러
  */
 export default function EarlyEndModal({
   open,
   answeredCount = 0,
-  maxQuestions = 5,
-  threshold = 3,
+  maxQuestions = INTERVIEW_TOTAL_QUESTIONS,
+  threshold = PARTIAL_REPORT_MIN_ANSWERS,
   onConfirm,
   onCancel,
 }) {
@@ -31,10 +35,10 @@ export default function EarlyEndModal({
   const isSufficient = answeredCount >= threshold;
   const title = '면접을 종료하시겠어요?';
   const body = isSufficient
-    ? `지금까지의 답변 ${answeredCount}/${maxQuestions}으로 부분 리포트를 받을 수 있어요.\n면접을 다시 시작하면 결과는 사라집니다.`
+    ? `지금까지의 답변 ${answeredCount}/${maxQuestions}으로 부분 리포트를 받을 수 있어요.\n미완료 세션은 평가 부족으로 표시됩니다.`
     : answeredCount === 0
-    ? '아직 답변이 없어 리포트가 생성되지 않습니다.\n그래도 종료하시겠어요?'
-    : `답변이 ${answeredCount}개로 부족해 리포트가 생성되지 않습니다.\n그래도 종료하시겠어요?`;
+    ? `아직 답변이 없어 리포트가 생성되지 않습니다.\n부분 리포트는 최소 ${threshold}개 답변부터 가능합니다.`
+    : `답변이 ${answeredCount}개로 부족해 리포트가 생성되지 않습니다.\n부분 리포트는 최소 ${threshold}개 답변부터 가능합니다.`;
   const primaryLabel = isSufficient ? '결과 보기' : '그래도 종료';
   const primaryLoadingLabel = isSufficient ? '결과 생성 중...' : '종료 중...';
   const primaryVariantClass = isSufficient

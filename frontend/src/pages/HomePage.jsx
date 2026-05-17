@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import SampleResumeButton from '../debug/SampleResumeButton.jsx';
+import { INTERVIEW_SESSIONS, INTERVIEW_TOTAL_QUESTIONS } from '../utils/interviewPolicy.js';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ACCENT = '#6e74ff';
-const SECONDARY = '#06b6d4';
 
 const createMockFile = () => {
   const blob = new Blob(['Sample Resume'], { type: 'application/pdf' });
@@ -60,7 +60,7 @@ export default function HomePage({ onSubmit, onError, onSelectSampleResume, onCl
           </h1>
           <p className="lede">
             이력서 PDF를 분석해 당신의 약점을 정확히 파고드는<br />
-            맞춤형 꼬리 질문을 던집니다. 면접 후엔 6대 역량 리포트.
+            맞춤형 꼬리 질문을 던집니다. 면접 후엔 4개 세션 리포트.
           </p>
 
           <div
@@ -129,13 +129,13 @@ export default function HomePage({ onSubmit, onError, onSelectSampleResume, onCl
 
           <div className="proof">
             <div className="proof-item">
-              <span className="num">5</span>
-              <span className="lbl">평균 질문</span>
+              <span className="num">{INTERVIEW_TOTAL_QUESTIONS}</span>
+              <span className="lbl">총 질문</span>
             </div>
             <div className="proof-sep" />
             <div className="proof-item">
-              <span className="num">6</span>
-              <span className="lbl">역량 진단</span>
+              <span className="num">{INTERVIEW_SESSIONS.length}</span>
+              <span className="lbl">고정 세션</span>
             </div>
             <div className="proof-sep" />
             <div className="proof-item">
@@ -156,8 +156,8 @@ export default function HomePage({ onSubmit, onError, onSelectSampleResume, onCl
         <div className="how-grid">
           {[
             { n: '01', t: '이력서 분석', d: 'PyPDF2로 텍스트 추출, LLM이 기술 스택·프로젝트·공격 포인트를 구조화합니다.' },
-            { n: '02', t: '동적 꼬리 질문', d: '당신의 답변을 실시간 채점하고, 부족한 영역을 집요하게 다시 묻습니다.' },
-            { n: '03', t: '종합 리포트', d: '6대 역량을 시각화하고, 강점·약점·개선 방향을 구체적으로 제시합니다.' },
+            { n: '02', t: '20문항 세션 면접', d: 'CS, 프레임워크, 문제 해결, 커뮤니케이션 순서로 5문항씩 진행합니다.' },
+            { n: '03', t: '종합 리포트', d: '세션별 점수와 문항 피드백을 묶어 강점·약점·개선 방향을 구체적으로 제시합니다.' },
           ].map((s) => (
             <article key={s.n} className="how-card">
               <div className="how-num">{s.n}</div>
