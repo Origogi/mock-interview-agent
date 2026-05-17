@@ -17,6 +17,15 @@
 
 Over-engineering을 지양하고 MVP 핵심 기능 완성에 집중합니다.
 
+## 현재 데모 배포
+
+| 영역 | Railway Public URL | 비고 |
+|------|--------------------|------|
+| Frontend | `https://mock-interview-agent-production-7c51.up.railway.app` | 사용자가 접속하는 데모 앱 |
+| Backend | `https://mock-interview-agent-production.up.railway.app` | FastAPI API 서버, `/` 헬스체크 제공 |
+
+배포 전략은 Railway에서 FE/BE를 분리 서비스로 운영하는 방식입니다. 상세 환경 변수, CORS, 검증 절차는 [`deployment.md`](./deployment.md)에 정리합니다.
+
 ## 문서 인덱스
 
 | 파일 | 용도 |

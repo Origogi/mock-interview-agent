@@ -206,10 +206,8 @@ result = generate_sample_answer.invoke({"thread_id": "session-id", "quality_tier
 CORS: 기본값은 `localhost:5173`, `5174`, `3000` 이며, 배포 환경에서는 `BACKEND_CORS_ORIGINS` 또는 `CORS_ORIGINS`에 허용할 origin을 쉼표로 지정합니다.
 
 ```env
-BACKEND_CORS_ORIGINS=https://<frontend-domain>
+BACKEND_CORS_ORIGINS=https://mock-interview-agent-production-7c51.up.railway.app
 ```
-
-Railway 배포는 `backend/railway.toml`을 사용합니다. 서비스 설정은 Root Directory `/backend`, Config File Path `/backend/railway.toml`입니다.
 
 ### 면접 종료 정책
 
@@ -231,7 +229,53 @@ Railway 배포는 `backend/railway.toml`을 사용합니다. 서비스 설정은
 - 현재 질문은 Qn으로 복원하고, 프론트는 Page 3 입력 대기 상태로 돌아갑니다.
 - MVP는 원본 타임라인 보존 없이 현재 타임라인을 덮어쓰는 파괴적 복원 방식입니다.
 
-## 7. 테스트
+## 7. 배포 서비스 (Railway)
+
+Backend는 Railway에서 별도 서비스로 배포합니다.
+
+| 항목 | 값 |
+|------|----|
+| Public URL | `https://mock-interview-agent-production.up.railway.app` |
+| Root Directory | `/backend` |
+| Config File Path | `/backend/railway.toml` |
+| Runtime | Railpack + `uv run uvicorn main:app --host 0.0.0.0 --port $PORT` |
+| Healthcheck | `/` |
+
+필수 Railway Variables:
+
+```env
+OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-4.1-mini
+BACKEND_CORS_ORIGINS=https://mock-interview-agent-production-7c51.up.railway.app
+```
+
+선택 Variables:
+
+```env
+INTERVIEW_MODEL=gpt-4.1-mini
+EVALUATION_MODEL=gpt-4.1-mini
+SAMPLE_ANSWER_MODEL=gpt-4.1-mini
+```
+
+운영 체크:
+
+- `OPENAI_API_KEY`는 Railway Variables에만 저장하고 저장소에 커밋하지 않습니다.
+- 키 값 끝에 공백이나 줄바꿈이 들어가면 OpenAI 요청이 `Illegal header value`로 실패할 수 있습니다.
+- CORS origin은 `https://<frontend-domain>` 형식으로 입력하고 trailing slash를 붙이지 않습니다.
+- Variables 변경 후에는 Backend를 재배포해야 합니다.
+
+검증:
+
+```bash
+curl -i https://mock-interview-agent-production.up.railway.app/
+curl -i \
+  -H "Origin: https://mock-interview-agent-production-7c51.up.railway.app" \
+  https://mock-interview-agent-production.up.railway.app/
+```
+
+첫 요청은 `{"status":"Backend is running!"}`, 두 번째 요청은 `access-control-allow-origin` 헤더를 확인합니다.
+
+## 8. 테스트
 
 ### 기본 테스트
 
@@ -276,7 +320,7 @@ EVAL_JUDGE_MODEL="gpt-4.1-mini"
 
 > 현재 LLM 테스트는 15개 테스트 각각에서 evaluator 1회 + Judge 1회를 호출하므로 총 30회 LLM 호출이 발생합니다.
 
-## 8. 실행
+## 9. 실행
 
 ```bash
 cd backend
@@ -284,7 +328,7 @@ uv sync
 uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## 9. 환경 변수
+## 10. 환경 변수
 
 `backend/.env` 또는 모노레포 루트 `.env` 에 다음을 정의:
 ```env

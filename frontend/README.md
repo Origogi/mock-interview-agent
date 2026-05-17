@@ -99,14 +99,46 @@ CSS 토큰은 `src/index.css` 상단 + `src/tokens.css` 에 정의되어 있고,
 API base URL은 `VITE_API_BASE_URL`로 지정합니다. 로컬 기본값은 `http://localhost:8000`입니다.
 
 ```env
-VITE_API_BASE_URL=https://<backend-domain>
+VITE_API_BASE_URL=https://mock-interview-agent-production.up.railway.app
 ```
 
 백엔드 CORS allowlist는 배포 환경에서 `BACKEND_CORS_ORIGINS`로 프론트엔드 domain을 허용해야 합니다. Vite가 로컬에서 다른 포트로 fall back하면 `lsof -i :5173` 으로 점검 후 정리합니다.
 
-Railway 배포는 `frontend/railway.toml`, `Dockerfile`, `Caddyfile`을 사용합니다. 서비스 설정은 Root Directory `/frontend`, Config File Path `/frontend/railway.toml`입니다.
+## 7. 배포 서비스 (Railway)
 
-## 7. 실행
+Frontend는 Railway에서 Backend와 분리된 별도 서비스로 배포합니다.
+
+| 항목 | 값 |
+|------|----|
+| Public URL | `https://mock-interview-agent-production-7c51.up.railway.app` |
+| Root Directory | `/frontend` |
+| Config File Path | `/frontend/railway.toml` |
+| Runtime | Dockerfile build + Caddy static server |
+| Port | Railway `$PORT`, local fallback `8080` |
+| Healthcheck | `/` |
+
+필수 Railway Variable:
+
+```env
+VITE_API_BASE_URL=https://mock-interview-agent-production.up.railway.app
+```
+
+배포 동작:
+
+- `Dockerfile`의 build stage에서 `npm ci` 후 `npm run build`를 실행합니다.
+- `VITE_API_BASE_URL`은 Vite 빌드 시점에 정적 번들에 포함됩니다.
+- runtime stage는 Caddy가 `dist/`를 서빙하고 `try_files {path} /index.html`로 SPA fallback을 처리합니다.
+- Backend는 `BACKEND_CORS_ORIGINS=https://mock-interview-agent-production-7c51.up.railway.app`로 Frontend origin을 허용해야 합니다.
+
+검증:
+
+```bash
+curl -I https://mock-interview-agent-production-7c51.up.railway.app/
+```
+
+브라우저에서는 첫 화면의 API 상태가 online인지 확인하고, PDF 업로드 -> 요약 -> Q1 생성까지 확인합니다.
+
+## 8. 실행
 
 ```bash
 cd frontend

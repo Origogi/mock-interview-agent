@@ -76,21 +76,28 @@ cd frontend
 npm run dev
 ```
 
-## 🚢 배포 (Railway)
+## 🚢 배포 서비스 (Railway)
 
-Railway는 `frontend/`와 `backend/`를 각각 별도 서비스로 배포합니다.
+현재 데모 배포는 Railway에서 `backend/`와 `frontend/`를 각각 독립 서비스로 운영합니다.
 
-| Service | Root Directory | Config File Path |
-|---------|----------------|------------------|
-| Backend | `/backend` | `/backend/railway.toml` |
-| Frontend | `/frontend` | `/frontend/railway.toml` |
+| Service | Public URL | Root Directory | Config File Path | Runtime |
+|---------|------------|----------------|------------------|---------|
+| Backend | `https://mock-interview-agent-production.up.railway.app` | `/backend` | `/backend/railway.toml` | Railpack + FastAPI/Uvicorn |
+| Frontend | `https://mock-interview-agent-production-7c51.up.railway.app` | `/frontend` | `/frontend/railway.toml` | Dockerfile + Caddy |
 
 필수 환경 변수:
 
-- Backend: `OPENAI_API_KEY`, `OPENAI_MODEL=gpt-4.1-mini`, `BACKEND_CORS_ORIGINS=https://<frontend-domain>`
-- Frontend: `VITE_API_BASE_URL=https://<backend-domain>`
+- Backend: `OPENAI_API_KEY`, `OPENAI_MODEL=gpt-4.1-mini`, `BACKEND_CORS_ORIGINS=https://mock-interview-agent-production-7c51.up.railway.app`
+- Frontend: `VITE_API_BASE_URL=https://mock-interview-agent-production.up.railway.app`
 
-상세 절차는 [Railway 배포 문서](./planning/deployment.md)를 참고합니다.
+운영 주의사항:
+
+- `OPENAI_API_KEY`는 Railway Backend Variables에만 등록하고 저장소에는 커밋하지 않습니다.
+- API 키 값 끝에 공백이나 줄바꿈이 들어가면 OpenAI 요청의 Authorization header가 깨질 수 있습니다.
+- 프론트엔드의 `VITE_API_BASE_URL`은 빌드 시점에 번들에 포함되므로 값을 바꾸면 Frontend를 재배포해야 합니다.
+- Backend CORS 허용 origin을 바꾸면 Backend를 재배포해야 합니다.
+
+상세 절차와 검증 커맨드는 [Railway 배포 문서](./planning/deployment.md)를 참고합니다.
 
 ## 📂 기획 및 설계 문서 (Index)
 이 프로젝트는 기획, 프론트엔드, 백엔드가 완벽하게 분리된 모노레포 구조로 관리됩니다. 상세 아키텍처 및 기획 문서는 각 폴더의 README를 참고해 주세요.
