@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tech-Interviewer AI - Technical Deck</title>
+<style>
+  :root {
+    --paper: #f7f5ee;
+    --paper-2: #eeebe2;
+    --ink: #171717;
+    --muted: #5f625d;
+    --soft: #888a84;
+    --rule: rgba(23, 23, 23, 0.13);
+    --rule-strong: rgba(23, 23, 23, 0.26);
+    --accent: #d66a3a;
+    --accent-tint: rgba(214, 106, 58, 0.1);
+    --blue: #365f9c;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Pretendard, system-ui, sans-serif;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    overflow-x: hidden;
+    scroll-snap-type: y mandatory;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .slide {
+    width: 100vw;
+    min-height: 100vh;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5.5vh 6vw;
+  }
+
+  .slide-inner { width: min(1120px, 100%); }
+
+  #s3 .slide-inner { width: min(1280px, 100%); }
+
+  #s3 h1 { margin-bottom: 18px; }
+
+  .eyebrow {
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    line-height: 1;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+
+  h1, h2 {
+    font-family: var(--sans);
+    font-size: clamp(28px, 2.8vw, 40px);
+    font-weight: 760;
+    letter-spacing: 0;
+    line-height: 1.18;
+    margin-bottom: 26px;
+  }
+
+  .lead {
+    max-width: 820px;
+    color: var(--muted);
+    font-size: 17px;
+    line-height: 1.62;
+    margin-bottom: 28px;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    align-items: start;
+  }
+
+  .table {
+    border-top: 1px solid var(--rule-strong);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 190px 1fr;
+    gap: 24px;
+    border-bottom: 1px solid var(--rule);
+    padding: 16px 0;
+  }
+
+  .row.tight {
+    grid-template-columns: 170px 1fr;
+    padding: 13px 0;
+  }
+
+  .key {
+    font-size: 17px;
+    font-weight: 740;
+  }
+
+  .value {
+    color: #3f423e;
+    font-size: 16.5px;
+    font-weight: 500;
+    line-height: 1.62;
+  }
+
+  .mono {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: #25272c;
+    font-weight: 650;
+  }
+
+  .diagram-wrap {
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: #f5f5f5;
+    overflow: hidden;
+  }
+
+  .diagram-wrap svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .state-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  .feature-card {
+    border-top: 1px solid var(--rule-strong);
+    padding-top: 18px;
+    min-height: 132px;
+  }
+
+  .feature-title {
+    font-size: 20px;
+    font-weight: 760;
+    margin-bottom: 10px;
+  }
+
+  .feature-copy {
+    color: #3f423e;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.58;
+  }
+
+  .state-item {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 18px;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 13px 14px;
+    background: rgba(255,255,255,0.28);
+  }
+
+  .state-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink);
+  }
+
+  .state-use {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .demo-list {
+    counter-reset: demo;
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 28px;
+  }
+
+  .demo-list li {
+    counter-increment: demo;
+    display: grid;
+    grid-template-columns: 38px 1fr;
+    gap: 14px;
+    border-top: 1px solid var(--rule);
+    padding-top: 16px;
+  }
+
+  .demo-list li::before {
+    content: counter(demo);
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 50%;
+    color: var(--accent);
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  .demo-title {
+    font-size: 17px;
+    font-weight: 730;
+    margin-bottom: 5px;
+  }
+
+  .demo-desc {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  #counter,
+  .kbd-hint {
+    position: fixed;
+    bottom: 22px;
+    z-index: 10;
+    color: var(--soft);
+    font-family: var(--mono);
+    font-size: 12px;
+    user-select: none;
+  }
+
+  #counter { right: 28px; }
+  .kbd-hint { left: 28px; }
+
+  @media (max-width: 860px) {
+    .slide { padding: 6vh 5vw; }
+    .grid-2, .feature-grid, .demo-list { grid-template-columns: 1fr; }
+    .row, .row.tight, .state-item { grid-template-columns: 1fr; gap: 8px; }
+    .diagram-wrap { overflow-x: auto; }
+    .diagram-wrap svg { min-width: 860px; }
+  }
+</style>
+</head>
+<body>
+
+<section class="slide" id="s1">
+  <div class="slide-inner">
+    <div class="eyebrow">01 / Project map</div>
+    <h1>Tech-Interviewer AI 전체 구조</h1>
+    <p class="lead">
+      PDF 이력서를 입력으로 받고, FastAPI가 LangGraph Agent를 실행합니다.
+      Agent는 이력서 요약, 질문 생성, 답변 평가, 최종 리포트 생성을 담당합니다.
+    </p>
+    <div class="diagram-wrap" aria-label="Project map diagram">
+      <svg viewBox="0 0 1120 360" role="img">
+        <defs>
+          <marker id="map-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/>
+          </marker>
+        </defs>
+        <rect width="1120" height="360" fill="#f5f5f5"/>
+        <text x="42" y="54" fill="#2d3142" font-family="Georgia, serif" font-size="24">Project Map</text>
+        <text x="44" y="78" fill="#4f5d75" font-family="SF Mono, monospace" font-size="10" letter-spacing="1.4">INPUT → UI → API → AGENT → OUTPUT</text>
+
+        <path d="M178 182 H280" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#map-arrow)"/>
+        <path d="M414 182 H516" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#map-arrow)"/>
+        <path d="M650 182 H752" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#map-arrow)"/>
+        <path d="M886 182 H988" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#map-arrow)"/>
+
+        <rect x="46" y="132" width="132" height="100" rx="6" fill="#ffffff" stroke="#7a8399"/>
+        <text x="78" y="174" fill="#2d3142" font-family="Geist, system-ui, sans-serif" font-size="14" font-weight="700">PDF Resume</text>
+        <text x="80" y="198" fill="#4f5d75" font-family="SF Mono, monospace" font-size="9">input file</text>
+
+        <rect x="280" y="132" width="134" height="100" rx="6" fill="#ffffff" stroke="#2d3142"/>
+        <text x="313" y="174" fill="#2d3142" font-family="Geist, system-ui, sans-serif" font-size="14" font-weight="700">React UI</text>
+        <text x="303" y="198" fill="#4f5d75" font-family="SF Mono, monospace" font-size="9">upload/chat/report</text>
+
+        <rect x="516" y="132" width="134" height="100" rx="6" fill="#ffffff" stroke="#2d3142"/>
+        <text x="548" y="174" fill="#2d3142" font-family="Geist, system-ui, sans-serif" font-size="14" font-weight="700">FastAPI</text>
+        <text x="550" y="198" fill="#4f5d75" font-family="SF Mono, monospace" font-size="9">agent API</text>
+
+        <rect x="752" y="132" width="134" height="100" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1.4"/>
+        <text x="782" y="174" fill="#2d3142" font-family="Geist, system-ui, sans-serif" font-size="14" font-weight="700">LangGraph</text>
+        <text x="794" y="198" fill="#4f5d75" font-family="SF Mono, monospace" font-size="9">state graph</text>
+
+        <rect x="988" y="132" width="96" height="100" rx="6" fill="#ffffff" stroke="#4f5d75"/>
+        <text x="1014" y="174" fill="#2d3142" font-family="Geist, system-ui, sans-serif" font-size="14" font-weight="700">Report</text>
+        <text x="1010" y="198" fill="#4f5d75" font-family="SF Mono, monospace" font-size="9">output</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="s2">
+  <div class="slide-inner">
+    <div class="eyebrow">02 / Tech stack</div>
+    <h1>Tech Stack</h1>
+    <div class="table">
+      <div class="row">
+        <div class="key">Frontend</div>
+        <div class="value"><span class="mono">React + Vite</span><br>PDF 업로드, 요약 화면, 면접 채팅, 리포트, 타임머신 UI</div>
+      </div>
+      <div class="row">
+        <div class="key">FrontEnd Design</div>
+        <div class="value"><span class="mono">Claude Design</span><br>페이지 흐름, 화면 구성, 다크 미니멀 UI, 리포트 화면 디자인 개선</div>
+      </div>
+      <div class="row">
+        <div class="key">Backend</div>
+        <div class="value"><span class="mono">FastAPI + Uvicorn</span><br>업로드, 채팅, 스트리밍, 조기 종료, 되감기 API</div>
+      </div>
+      <div class="row">
+        <div class="key">Agent</div>
+        <div class="value"><span class="mono">LangGraph + LangChain</span><br>상태 기반 면접 플로우, 노드 실행, 조건 분기</div>
+      </div>
+      <div class="row">
+        <div class="key">LLM</div>
+        <div class="value"><span class="mono">OpenAI gpt-4.1-mini</span><br>질문 생성, 답변 평가, 샘플 답변, 최종 리포트 JSON 생성</div>
+      </div>
+      <div class="row">
+        <div class="key">PDF</div>
+        <div class="value"><span class="mono">PyPDF2</span><br>업로드된 이력서 PDF에서 면접 컨텍스트로 사용할 텍스트 추출</div>
+      </div>
+      <div class="row">
+        <div class="key">Deploy</div>
+        <div class="value"><span class="mono">Railway</span><br>Frontend와 Backend를 분리된 서비스로 배포하고 환경 변수로 API 연결</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="s3">
+  <div class="slide-inner">
+    <div class="eyebrow">03 / LangGraph flow</div>
+    <h1>LangGraph Interview Flow</h1>
+    <div class="diagram-wrap" aria-label="LangGraph flowchart">
+      <svg viewBox="0 0 1240 600" role="img">
+        <defs>
+          <marker id="flow-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/>
+          </marker>
+          <marker id="flow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/>
+          </marker>
+        </defs>
+        <rect width="1240" height="600" fill="#f5f5f5"/>
+        <g transform="translate(0 -54)">
+        <path d="M126 180 H190" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#flow-arrow)"/>
+        <path d="M340 180 H410" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#flow-arrow)"/>
+        <path d="M560 180 H630" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#flow-arrow)"/>
+        <path d="M705 230 V330" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#flow-arrow)"/>
+        <path d="M780 380 H810" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#flow-arrow)"/>
+        <path d="M990 380 H1030" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#flow-arrow)"/>
+        <path d="M1110 430 V510" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#flow-arrow)"/>
+        <path d="M900 460 C820 548 500 548 485 230" fill="none" stroke="#eb6c36" stroke-width="1.5" marker-end="url(#flow-accent)"/>
+
+        <rect x="626" y="528" width="78" height="22" rx="4" fill="#f5f5f5"/>
+        <text x="636" y="543" fill="#eb6c36" font-family="SF Mono, monospace" font-size="10">No: loop</text>
+        <rect x="998" y="356" width="34" height="20" rx="4" fill="#f5f5f5"/>
+        <text x="1006" y="370" fill="#4f5d75" font-family="SF Mono, monospace" font-size="10">Yes</text>
+
+        <ellipse cx="78" cy="180" rx="48" ry="30" fill="#ffffff" stroke="#2d3142" stroke-width="1.2"/>
+        <text x="56" y="185" fill="#2d3142" font-family="Geist, system-ui, sans-serif" font-size="13" font-weight="700">START</text>
+
+        <rect x="190" y="130" width="150" height="100" rx="6" fill="#ffffff" stroke="#2d3142"/>
+        <text x="231" y="172" fill="#2d3142" font-family="Geist, system-ui, sans-serif" font-size="14" font-weight="700">Resume</text>
+        <text x="241" y="192" fill="#2d3142" font-family="Geist, system-ui, sans-serif" font-size="14" font-weight="700">Parser</text>
+        <text x="225" y="212" fill="#4f5d75" font-family="SF Mono, monospace" font-size="9">PDF → summary</text>
+
+        <rect x="410" y="130" width="150" height="100" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1.4"/>
+        <text x="443" y="176" fill="#2d3142" font-family="Geist, system-ui, sans-serif" font-size="15" font-weight="700">Interviewer</text>
+        <text x="443" y="200" fill="#4f5d75" font-family="SF Mono, monospace" font-size="9">question</text>
+
+        <rect x="630" y="130" width="150" height="100" rx="6" fill="#ffffff" stroke="#7a8399"/>
+        <text x="673" y="176" fill="#2d3142" font-family="Geist, system-ui, sans-serif" font-size="14" font-weight="700">User Answer</text>
+        <text x="679" y="200" fill="#4f5d75" font-family="SF Mono, monospace" font-size="9">interrupt</text>
+
+        <rect x="630" y="330" width="150" height="100" rx="6" fill="#ffffff" stroke="#2d3142"/>
+        <text x="675" y="374" fill="#2d3142" font-family="Geist, system-ui, sans-serif" font-size="14" font-weight="700">Evaluator</text>
+        <text x="665" y="398" fill="#4f5d75" font-family="SF Mono, monospace" font-size="9">score + feedback</text>
+
+        <polygon points="900,300 990,380 900,460 810,380" fill="#ffffff" stroke="#2d3142" stroke-width="1.2"/>
+        <text x="858" y="374" fill="#2d3142" font-family="Geist, system-ui, sans-serif" font-size="13" font-weight="700">question_count</text>
+        <text x="876" y="394" fill="#2d3142" font-family="Geist, system-ui, sans-serif" font-size="13" font-weight="700">reached?</text>
+
+        <rect x="1030" y="330" width="160" height="100" rx="6" fill="#ffffff" stroke="#4f5d75"/>
+        <text x="1083" y="372" fill="#2d3142" font-family="Geist, system-ui, sans-serif" font-size="14" font-weight="700">Report</text>
+        <text x="1070" y="392" fill="#2d3142" font-family="Geist, system-ui, sans-serif" font-size="14" font-weight="700">Generator</text>
+        <text x="1072" y="412" fill="#4f5d75" font-family="SF Mono, monospace" font-size="9">final report</text>
+
+        <ellipse cx="1110" cy="545" rx="50" ry="30" fill="#ffffff" stroke="#2d3142"/>
+        <text x="1095" y="550" fill="#2d3142" font-family="Geist, system-ui, sans-serif" font-size="13" font-weight="700">END</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="s4">
+  <div class="slide-inner">
+    <div class="eyebrow">04 / Interview rules</div>
+    <h1>Interview Rules</h1>
+    <div class="table">
+      <div class="row">
+        <div class="key">Interview Policy</div>
+        <div class="value">총 20문항, 4개 세션, 세션당 5문항으로 면접 범위를 고정합니다.</div>
+      </div>
+      <div class="row">
+        <div class="key">Session Order</div>
+        <div class="value">CS Fundamentals → Framework Usage → Problem Solving → Communication 순서로 진행합니다.</div>
+      </div>
+      <div class="row">
+        <div class="key">Interviewer Rule</div>
+        <div class="value">한 번에 하나의 질문만 생성하고, 이력서 요약과 이전 답변을 질문 컨텍스트로 사용합니다.</div>
+      </div>
+      <div class="row">
+        <div class="key">Follow-up Rule</div>
+        <div class="value">답변의 근거, 트레이드오프, 운영 관점이 부족하면 같은 맥락에서 꼬리 질문을 생성합니다.</div>
+      </div>
+      <div class="row">
+        <div class="key">Evaluator Rule</div>
+        <div class="value">정확성, 구체성, 논리성, 트레이드오프, 운영 관점을 기준으로 답변을 평가합니다.</div>
+      </div>
+      <div class="row">
+        <div class="key">Output Contract</div>
+        <div class="value">질문은 문자열로, 평가는 점수/피드백으로, 리포트는 세션별 JSON 구조로 반환합니다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="s5">
+  <div class="slide-inner">
+    <div class="eyebrow">05 / Key features</div>
+    <h1>Key Features</h1>
+    <div class="feature-grid">
+      <article class="feature-card">
+        <div class="feature-title">PDF Resume Analysis</div>
+        <p class="feature-copy">PDF 이력서를 업로드하면 기술 스택, 프로젝트, 경력 요약, 강점과 약점을 정리합니다.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-title">AI Interview Questions</div>
+        <p class="feature-copy">이력서 내용과 이전 답변을 기반으로 기술 면접 질문과 꼬리 질문을 생성합니다.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-title">AI Sample Answers</div>
+        <p class="feature-copy">현재 질문에 대해 Best, Good, Bad 수준의 샘플 답변을 생성해 답변 품질을 비교할 수 있습니다.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-title">Time Machine</div>
+        <p class="feature-copy">특정 질문 이전으로 되돌아가 다시 답변하고, 이후 평가와 리포트를 새로 만들 수 있습니다.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-title">Final Report</div>
+        <p class="feature-copy">세션별 점수, 강점과 약점, 개선 방향, 답변별 피드백을 최종 리포트로 보여줍니다.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-title">Early End Report</div>
+        <p class="feature-copy">면접을 끝까지 진행하지 않아도 일정 답변 이후에는 부분 리포트를 확인할 수 있습니다.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="s6">
+  <div class="slide-inner">
+    <div class="eyebrow">06 / Demo sequence</div>
+    <h1>시연 순서</h1>
+    <ol class="demo-list">
+      <li>
+        <div>
+          <div class="demo-title">PDF 업로드</div>
+          <p class="demo-desc">Resume Parser 실행, resume_summary 생성</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <div class="demo-title">이력서 요약 확인</div>
+          <p class="demo-desc">강점/약점, 기술 스택, 프로젝트 요약 확인</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <div class="demo-title">질문 생성</div>
+          <p class="demo-desc">Interviewer가 이력서 맥락 기반 질문 생성</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <div class="demo-title">답변 제출</div>
+          <p class="demo-desc">Evaluator 평가 후 다음 질문 또는 리포트로 라우팅</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <div class="demo-title">샘플 답변 / 타임머신</div>
+          <p class="demo-desc">AI 응답 생성과 checkpoint 기반 되감기 확인</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <div class="demo-title">최종 리포트</div>
+          <p class="demo-desc">Report Generator 결과와 세션별 피드백 확인</p>
+        </div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<div class="kbd-hint">← → / Space</div>
+<div id="counter">1 / 6</div>
+
+<script>
+  (function () {
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const counter = document.getElementById("counter");
+    let current = 0;
+
+    function go(index) {
+      current = Math.max(0, Math.min(slides.length - 1, index));
+      slides[current].scrollIntoView({ behavior: "smooth" });
+    }
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "ArrowRight" || event.key === "ArrowDown" || event.key === " ") {
+        event.preventDefault();
+        go(current + 1);
+      }
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+        event.preventDefault();
+        go(current - 1);
+      }
+      if (event.key === "Home") {
+        event.preventDefault();
+        go(0);
+      }
+      if (event.key === "End") {
+        event.preventDefault();
+        go(slides.length - 1);
+      }
+    });
+
+    const observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          current = slides.indexOf(entry.target);
+          counter.textContent = String(current + 1) + " / " + String(slides.length);
+        }
+      });
+    }, { threshold: 0.6 });
+
+    slides.forEach(function (slide) { observer.observe(slide); });
+  })();
+</script>
+</body>
+</html>
